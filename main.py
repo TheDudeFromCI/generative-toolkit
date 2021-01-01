@@ -57,7 +57,7 @@ def main():
     vae_gan = VAE_GAN(IMAGE_SIZE, IMAGE_CHANNELS, LATENT_DIM, dataloader)
     vae_gan.cuda()
 
-    vae_gan.train_vae(epochs=20)
+    vae_gan.train_vae(epochs=40)
     save_vae_snapshot(vae_gan.vae, dataloader)
 
 

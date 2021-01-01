@@ -23,7 +23,7 @@ class Downscaler(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, image_size, channels, latent_dim, layers_per_size=2):
+    def __init__(self, image_size, channels, layers_per_size=2):
         super().__init__()
 
         assert (image_size & (image_size - 1) == 0) and image_size > 0, \
@@ -31,7 +31,6 @@ class Encoder(nn.Module):
 
         self.image_size = image_size
         self.channels = channels
-        self.latent_dim = latent_dim
 
         blocks = []
         while image_size > 1:
@@ -41,20 +40,9 @@ class Encoder(nn.Module):
             channels *= 2
 
         blocks.append(nn.Flatten())
-        self.layers = nn.Sequential(*blocks)
 
-        self.mu = nn.Linear(channels, latent_dim)
-        self.var = nn.Linear(channels, latent_dim)
+        self.layers = nn.Sequential(*blocks)
+        self.max_channels = channels
 
     def forward(self, x):
-        x = self.layers(x)
-        mu = self.mu(x)
-        var = self.var(x)
-
-        z = self.reparameterize(mu, var)
-        return [z, mu, var]
-
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return eps * std + mu
+        return self.layers(x)

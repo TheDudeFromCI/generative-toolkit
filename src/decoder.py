@@ -32,7 +32,7 @@ class Decoder(nn.Module):
         self.channels = channels
         self.latent_dim = latent_dim
 
-        blocks = []
+        blocks = [activation]
 
         while image_size > 1:
             image_size /= 2
@@ -44,15 +44,13 @@ class Decoder(nn.Module):
             dim=1, unflattened_size=(channels, 1, 1)))
 
         self.layers = nn.Sequential(*blocks)
+        self.max_channels = channels
 
         self.dense = nn.Sequential(
             nn.Linear(latent_dim, channels),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+            nn.LeakyReLU(negative_slope=0.2, inplace=True),
         )
-
-        self.activation = activation
 
     def forward(self, x):
         x = self.dense(x)
-        x = self.layers(x)
-        return self.activation(x)
+        return self.layers(x)

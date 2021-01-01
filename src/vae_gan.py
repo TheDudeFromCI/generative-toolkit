@@ -17,17 +17,17 @@ class VAE_GAN(nn.Module):
         self.dataloader = dataloader
 
         self.encoder = Encoder(image_size, image_channels,
-                               latent_dim, layers_per_size=3)
+                               layers_per_size=4)
 
-        self.decoder = Decoder(image_size, image_channels,
-                               latent_dim, nn.Sigmoid(), layers_per_size=3)
+        self.decoder = Decoder(image_size, image_channels, latent_dim,
+                               nn.Sigmoid(), layers_per_size=4)
 
-        self.vae = VAE(self.encoder, self.decoder)
+        self.vae = VAE(self.encoder, self.decoder, latent_dim)
 
     def train_vae(self, epochs=100):
         batch_count = len(self.dataloader)
 
-        optimizer = Adam(self.vae.parameters(), lr=5e-3)
+        optimizer = Adam(self.vae.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
             for batch_number, sample in enumerate(self.dataloader):
