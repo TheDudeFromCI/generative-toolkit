@@ -23,7 +23,7 @@ class Downscaler(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, image_size, channels, layers_per_size=2):
+    def __init__(self, image_size, channels, layers_per_size=2, channel_scaling=2):
         super().__init__()
 
         assert (image_size & (image_size - 1) == 0) and image_size > 0, \
@@ -32,12 +32,14 @@ class Encoder(nn.Module):
         self.image_size = image_size
         self.channels = channels
 
+        def scale(x): return int(x * channel_scaling)
+
         blocks = []
         while image_size > 1:
             image_size /= 2
             blocks.append(Downscaler(
-                channels, channels * 2, layers=layers_per_size))
-            channels *= 2
+                channels, scale(channels), layers=layers_per_size))
+            channels = scale(channels)
 
         blocks.append(nn.Flatten())
 

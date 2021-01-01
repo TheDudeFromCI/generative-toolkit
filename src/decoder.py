@@ -22,7 +22,7 @@ class Upscaler(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, image_size, channels, latent_dim, activation, layers_per_size=2):
+    def __init__(self, image_size, channels, latent_dim, activation, layers_per_size=2, channel_scaling=2):
         super().__init__()
 
         assert (image_size & (image_size - 1) == 0) and image_size > 0, \
@@ -32,13 +32,14 @@ class Decoder(nn.Module):
         self.channels = channels
         self.latent_dim = latent_dim
 
-        blocks = [activation]
+        def scale(x): return int(x * channel_scaling)
 
+        blocks = [activation]
         while image_size > 1:
             image_size /= 2
             blocks.insert(0, Upscaler(
-                channels * 2, channels, layers=layers_per_size))
-            channels *= 2
+                scale(channels), channels, layers=layers_per_size))
+            channels = scale(channels)
 
         blocks.insert(0, nn.Unflatten(
             dim=1, unflattened_size=(channels, 1, 1)))
