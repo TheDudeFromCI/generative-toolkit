@@ -75,7 +75,7 @@ def main():
     summary(vae_gan, depth=10)
 
     groups = {
-        'VAE': ['recons_loss', 'kld_loss'],
+        'VAE': ['recons_loss'],
         'GAN': ['g_loss', 'd_loss'],
         'Total': ['total']
     }
@@ -87,14 +87,13 @@ def main():
         save_gan_snapshot(vae_gan.gan, epoch)
 
         logs = {
-            'recons_loss': recons_loss,
-            'kld_loss': kld_loss,
+            'recons_loss': recons_loss + kld_loss,
             'g_loss': g_loss,
             'd_loss': d_loss,
             'total': recons_loss + kld_loss + g_loss + d_loss,
         }
 
-        liveloss.update(logs)
+        liveloss.update(logs, current_step=epoch)
         liveloss.send()
 
     vae_gan.train_dual(epochs=500,
