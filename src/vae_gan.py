@@ -29,15 +29,13 @@ class VAE_GAN(nn.Module):
     def train_vae(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)
 
-        optimizer = Adam(self.vae.parameters(), lr=1e-3)
-
         for epoch in range(epochs):
             if epoch_callback is not None:
                 epoch_callback(epoch)
 
             for batch_number, sample in enumerate(self.dataloader):
                 sample = Variable(sample[0].type(FloatTensor))
-                err = self.vae.train_batch(sample, optimizer)
+                err = self.vae.train_batch(sample)
 
                 print('[Epoch {}/{}] (Batch {}/{}) Err: {:.4f}'.format(epoch + 1,
                                                                        epochs, batch_number + 1, batch_count, err))
@@ -59,3 +57,24 @@ class VAE_GAN(nn.Module):
                                                                                           batch_count,
                                                                                           g_loss,
                                                                                           d_loss))
+
+    def train_dual(self, epochs=100, epoch_callback=None):
+        batch_count = len(self.dataloader)
+
+        for epoch in range(epochs):
+            if epoch_callback is not None:
+                epoch_callback(epoch)
+
+            for batch_number, sample in enumerate(self.dataloader):
+                sample = Variable(sample[0].type(FloatTensor))
+
+                d_loss, g_loss = self.gan.train_batch(sample)
+                vae_loss = self.vae.train_batch(sample)
+
+                print('[Epoch {}/{}] (Batch {}/{}) VAE_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}'.format(epoch + 1,
+                                                                                                            epochs,
+                                                                                                            batch_number + 1,
+                                                                                                            batch_count,
+                                                                                                            vae_loss,
+                                                                                                            g_loss,
+                                                                                                            d_loss))

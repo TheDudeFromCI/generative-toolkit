@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.optim import Adam
 from torch.nn import functional as F
 from torch.nn.modules import flatten
 
@@ -13,6 +14,8 @@ class VAE(nn.Module):
         channels = encoder.max_channels
         self.mu = nn.Linear(channels, latent_dim)
         self.var = nn.Linear(channels, latent_dim)
+
+        self.optimizer = Adam(self.parameters(), lr=1e-3)
 
     def forward(self, x):
         x = self.encoder(x)
@@ -29,8 +32,8 @@ class VAE(nn.Module):
         eps = torch.randn_like(std)
         return eps * std + mu
 
-    def train_batch(self, batch, optimizer):
-        optimizer.zero_grad()
+    def train_batch(self, batch):
+        self.optimizer.zero_grad()
 
         recons, mu, var = self(batch)
 
@@ -39,7 +42,7 @@ class VAE(nn.Module):
 
         loss = recons_loss + kld_loss
         loss.backward()
-        optimizer.step()
+        self.optimizer.step()
 
         return loss.item()
 

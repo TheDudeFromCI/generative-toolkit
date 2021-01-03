@@ -68,10 +68,10 @@ def main():
     vae_gan.cuda()
 
     def epoch_callback(epoch):
-        # save_vae_snapshot(vae_gan.vae, dataloader, epoch)
+        save_vae_snapshot(vae_gan.vae, dataloader, epoch)
         save_gan_snapshot(vae_gan.gan, epoch)
 
-    vae_gan.train_gan(epochs=40, epoch_callback=epoch_callback)
+    vae_gan.train_dual(epochs=100, epoch_callback=epoch_callback)
 
 
 if __name__ == '__main__':
