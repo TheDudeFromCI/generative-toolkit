@@ -35,10 +35,10 @@ class VAE_GAN(nn.Module):
 
             for batch_number, sample in enumerate(self.dataloader):
                 sample = Variable(sample[0].type(FloatTensor))
-                err = self.vae.train_batch(sample)
+                recons_loss, kld_loss = self.vae.train_batch(sample)
 
-                print('[Epoch {}/{}] (Batch {}/{}) Err: {:.4f}'.format(epoch + 1,
-                                                                       epochs, batch_number + 1, batch_count, err))
+                print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}'
+                      .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss))
 
     def train_gan(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)
@@ -51,30 +51,33 @@ class VAE_GAN(nn.Module):
                 sample = Variable(sample[0].type(FloatTensor))
                 d_loss, g_loss = self.gan.train_batch(sample)
 
-                print('[Epoch {}/{}] (Batch {}/{}) G_Loss: {:.4f}, D_Loss: {:.4f}'.format(epoch + 1,
-                                                                                          epochs,
-                                                                                          batch_number + 1,
-                                                                                          batch_count,
-                                                                                          g_loss,
-                                                                                          d_loss))
+                print('[Epoch {}/{}] (Batch {}/{}) G_Loss: {:.4f}, D_Loss: {:.4f}'
+                      .format(epoch + 1, epochs, batch_number + 1, batch_count, g_loss, d_loss))
 
     def train_dual(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)
 
         for epoch in range(epochs):
-            if epoch_callback is not None:
-                epoch_callback(epoch)
+            recons_loss_total = 0
+            kld_loss_total = 0
+            g_loss_total = 0
+            d_loss_total = 0
 
             for batch_number, sample in enumerate(self.dataloader):
                 sample = Variable(sample[0].type(FloatTensor))
 
-                d_loss, g_loss = self.gan.train_batch(sample)
-                vae_loss = self.vae.train_batch(sample)
+                recons_loss, kld_loss = self.vae.train_batch(sample)
+                g_loss, d_loss = self.gan.train_batch(sample)
 
-                print('[Epoch {}/{}] (Batch {}/{}) VAE_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}'.format(epoch + 1,
-                                                                                                            epochs,
-                                                                                                            batch_number + 1,
-                                                                                                            batch_count,
-                                                                                                            vae_loss,
-                                                                                                            g_loss,
-                                                                                                            d_loss))
+                recons_loss_total += recons_loss / batch_count
+                kld_loss_total += kld_loss / batch_count
+                g_loss_total += g_loss / batch_count
+                d_loss_total += d_loss / batch_count
+
+                print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}, Total_Loss: {:.4f}'
+                      .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss, g_loss, d_loss,
+                              recons_loss + kld_loss + g_loss + d_loss))
+
+            if epoch_callback is not None:
+                epoch_callback(epoch + 1, recons_loss_total,
+                               kld_loss_total, g_loss_total, d_loss_total)

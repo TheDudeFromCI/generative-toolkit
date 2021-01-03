@@ -8,13 +8,17 @@ from torch.autograd import Variable
 from torchvision import transforms
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10, MNIST
+from torchvision.datasets import CIFAR10
 
-COLOR_IMAGE = False
+from torchinfo import summary
+from livelossplot import PlotLosses
+from livelossplot.outputs import BokehPlot
+
+COLOR_IMAGE = True
 IMAGE_SIZE = 32
 BATCH_SIZE = 64
 DATA_FOLDER = 'data'
-LATENT_DIM = 16
+LATENT_DIM = 512
 
 IMAGE_FORMAT = 'RGB' if COLOR_IMAGE else 'L'
 IMAGE_CHANNELS = 3 if COLOR_IMAGE else 1
@@ -42,11 +46,11 @@ def save_gan_snapshot(gan, epoch):
 def main():
 
     dataloader = DataLoader(
-        MNIST(DATA_FOLDER, train=True, download=True,
-              transform=transforms.Compose([
-                  transforms.ToTensor(),
-                  transforms.Resize(IMAGE_SIZE),
-              ])),
+        CIFAR10(DATA_FOLDER, train=True, download=True,
+                transform=transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Resize(IMAGE_SIZE),
+                ])),
 
         # If you want to train on your own images instead
         # ImageDataset(
@@ -67,11 +71,34 @@ def main():
                       dataloader, layers_per_size=2, channel_scaling=3)
     vae_gan.cuda()
 
-    def epoch_callback(epoch):
+    print('Model Summary:')
+    summary(vae_gan, depth=10)
+
+    groups = {
+        'VAE': ['recons_loss', 'kld_loss'],
+        'GAN': ['g_loss', 'd_loss'],
+        'Total': ['total']
+    }
+    liveloss = PlotLosses(
+        outputs=[BokehPlot(max_cols=3)], mode='script', groups=groups)
+
+    def epoch_callback(epoch, recons_loss, kld_loss, g_loss, d_loss):
         save_vae_snapshot(vae_gan.vae, dataloader, epoch)
         save_gan_snapshot(vae_gan.gan, epoch)
 
-    vae_gan.train_dual(epochs=100, epoch_callback=epoch_callback)
+        logs = {
+            'recons_loss': recons_loss,
+            'kld_loss': kld_loss,
+            'g_loss': g_loss,
+            'd_loss': d_loss,
+            'total': recons_loss + kld_loss + g_loss + d_loss,
+        }
+
+        liveloss.update(logs)
+        liveloss.send()
+
+    vae_gan.train_dual(epochs=500,
+                       epoch_callback=epoch_callback)
 
 
 if __name__ == '__main__':

@@ -37,14 +37,14 @@ class VAE(nn.Module):
 
         recons, mu, var = self(batch)
 
-        recons_loss = F.binary_cross_entropy(recons, batch, reduction='mean')
+        recons_loss = F.mse_loss(recons, batch, reduction='mean')
         kld_loss = -0.5 * torch.mean(1 + var - mu.pow(2) - var.exp())
 
         loss = recons_loss + kld_loss
         loss.backward()
         self.optimizer.step()
 
-        return loss.item()
+        return [recons_loss.item(), kld_loss.item()]
 
     def sample_output(self, batch):
         with torch.no_grad():

@@ -22,7 +22,7 @@ class Discriminator(nn.Module):
             nn.Sigmoid(),
         )
 
-        self.optimizer = Adam(self.parameters(), lr=1e-3)
+        self.optimizer = Adam(self.parameters(), lr=3e-4)
 
     def forward(self, x):
         x = self.encoder(x)
@@ -39,7 +39,7 @@ class Generator(nn.Module):
         super().__init__()
         self.decoder = decoder
 
-        self.optimizer = Adam(self.parameters(), lr=1e-3)
+        self.optimizer = Adam(self.parameters(), lr=3e-4)
 
     def forward(self, x):
         x = self.decoder(x)
@@ -86,12 +86,14 @@ class GAN(nn.Module):
 
     def g_loop(self, d_real_data, unroll_steps):
         self.generator.optimizer.zero_grad()
+        unroll = unroll_steps > 0
 
         gen_input = self.random_z(len(d_real_data))
 
-        backup = copy.deepcopy(self.discriminator.state_dict())
-        for _ in range(unroll_steps):
-            self.d_loop(d_real_data, d_gen_input=gen_input)
+        if unroll:
+            backup = copy.deepcopy(self.discriminator.state_dict())
+            for _ in range(unroll_steps):
+                self.d_loop(d_real_data, d_gen_input=gen_input)
 
         g_fake_data = self.generator(gen_input)
         dg_fake_decision = self.discriminator(g_fake_data)
@@ -101,8 +103,9 @@ class GAN(nn.Module):
         g_error.backward()
         self.generator.optimizer.step()
 
-        self.discriminator.load_state_dict(backup)
-        del backup
+        if unroll:
+            self.discriminator.load_state_dict(backup)
+            del backup
 
         return g_error.item()
 
@@ -113,5 +116,5 @@ class GAN(nn.Module):
 
     def train_batch(self, batch):
         d_loss = self.d_loop(batch)
-        g_loss = self.g_loop(batch, 1)
-        return [d_loss, g_loss]
+        g_loss = self.g_loop(batch, 0)
+        return [g_loss, d_loss]
