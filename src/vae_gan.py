@@ -78,8 +78,8 @@ class VAE_GAN(nn.Module):
             for batch_number, sample in enumerate(self.dataloader):
                 sample = Variable(sample[0].type(FloatTensor))
 
-                recons_loss, kld_loss = self.vae.train_batch(sample)
                 g_loss, d_loss = self.gan.train_batch(sample)
+                recons_loss, kld_loss = self.vae.train_batch(sample)
 
                 recons_loss_total += recons_loss / batch_count
                 kld_loss_total += kld_loss / batch_count

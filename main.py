@@ -16,7 +16,7 @@ from livelossplot.outputs import BokehPlot
 
 COLOR_IMAGE = True
 IMAGE_SIZE = 32
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 DATA_FOLDER = 'data'
 LATENT_DIM = 512
 
