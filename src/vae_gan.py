@@ -44,7 +44,7 @@ class VAE_GAN(nn.Module):
                       .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss))
 
             if epoch_callback is not None:
-                epoch_callback(epoch, recons_loss_total, kld_loss_total)
+                epoch_callback(epoch + 1, recons_loss_total, kld_loss_total)
 
     def train_gan(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)
@@ -64,7 +64,7 @@ class VAE_GAN(nn.Module):
                       .format(epoch + 1, epochs, batch_number + 1, batch_count, g_loss, d_loss))
 
             if epoch_callback is not None:
-                epoch_callback(epoch, g_loss_total, d_loss_total)
+                epoch_callback(epoch + 1, g_loss_total, d_loss_total)
 
     def train_dual(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)
