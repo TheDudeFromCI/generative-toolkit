@@ -10,7 +10,7 @@ class Downscaler(nn.Module):
 
         blocks = []
 
-        activation = nn.LeakyReLU(negative_slope=0.2, inplace=True)
+        activation = nn.LeakyReLU(negative_slope=0.01, inplace=True)
         for i in range(layers):
             out = out_channels if i == layers - 1 else in_channels
             blocks.append(ResidualBlock(in_channels, out, activation))
