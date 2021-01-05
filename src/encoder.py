@@ -2,6 +2,7 @@ import torch
 from torch import nn
 
 from src.residual_block import ResidualBlock
+from echoAI.Activation.Torch.mish import Mish
 
 
 class Downscaler(nn.Module):
@@ -10,7 +11,9 @@ class Downscaler(nn.Module):
 
         blocks = []
 
-        activation = nn.LeakyReLU(negative_slope=0.01, inplace=True)
+        # activation = nn.LeakyReLU()
+        activation = Mish()
+
         for i in range(layers):
             out = out_channels if i == layers - 1 else in_channels
             blocks.append(ResidualBlock(in_channels, out, activation))
