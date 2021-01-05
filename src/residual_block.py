@@ -8,15 +8,17 @@ class ResidualBlock(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
 
+        hidden_channels = min(in_channels, out_channels)
+
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, kernel, 1, 1, bias=bias),
-            nn.BatchNorm2d(in_channels),
+            nn.Conv2d(in_channels, hidden_channels, kernel, 1, 1, bias=bias),
+            nn.GroupNorm(3, hidden_channels),
             activation,
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel, 1, 1, bias=bias),
-            nn.BatchNorm2d(out_channels),
+            nn.Conv2d(hidden_channels, out_channels, kernel, 1, 1, bias=bias),
+            nn.GroupNorm(3, out_channels),
         )
 
         self.activation = activation

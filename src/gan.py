@@ -1,4 +1,5 @@
 import copy
+import math
 import numpy as np
 
 import torch
@@ -15,14 +16,15 @@ class Discriminator(nn.Module):
         self.encoder = encoder
 
         channels = encoder.max_channels
+        half_channels = math.floor(channels/2)
         self.dense = nn.Sequential(
-            nn.Linear(channels, channels >> 1),
+            nn.Linear(channels, half_channels),
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Linear(channels >> 1, 1),
+            nn.Linear(half_channels, 1),
             nn.Sigmoid(),
         )
 
-        self.optimizer = Adam(self.parameters(), lr=3e-4)
+        self.optimizer = Adam(self.parameters(), lr=1e-3)
 
     def forward(self, x):
         x = self.encoder(x)
@@ -39,7 +41,7 @@ class Generator(nn.Module):
         super().__init__()
         self.decoder = decoder
 
-        self.optimizer = Adam(self.parameters(), lr=3e-4)
+        self.optimizer = Adam(self.parameters(), lr=1e-3)
 
     def forward(self, x):
         x = self.decoder(x)
