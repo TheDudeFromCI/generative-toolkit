@@ -8,11 +8,10 @@ from PIL import Image
 
 class ImageDataset(Dataset):
     def __init__(self, dir, transform, format='RGB'):
-        self.train_dir = dir + '/train'
-        self.mask_dir = dir + '/mask'
+        self.dir = dir
         self.transform = transform
         self.format = format
-        self.files = os.listdir(self.train_dir)
+        self.files = os.listdir(self.dir)
 
     def __len__(self):
         return len(self.files)
@@ -21,7 +20,7 @@ class ImageDataset(Dataset):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        img_name = os.path.join(self.train_dir, self.files[index])
+        img_name = os.path.join(self.dir, self.files[index])
         image = Image.open(img_name).convert(self.format)
         image = self.transform(image)
 
