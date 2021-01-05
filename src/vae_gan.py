@@ -44,7 +44,8 @@ class VAE_GAN(nn.Module):
                       .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss))
 
             if epoch_callback is not None:
-                epoch_callback(epoch + 1, recons_loss_total, kld_loss_total)
+                epoch_callback(
+                    epoch + 1, recons_loss=recons_loss_total, kld_loss=kld_loss_total)
 
     def train_gan(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)
@@ -64,10 +65,12 @@ class VAE_GAN(nn.Module):
                       .format(epoch + 1, epochs, batch_number + 1, batch_count, g_loss, d_loss))
 
             if epoch_callback is not None:
-                epoch_callback(epoch + 1, g_loss_total, d_loss_total)
+                epoch_callback(epoch + 1, g_loss=g_loss_total,
+                               d_loss=d_loss_total)
 
-    def train_dual(self, epochs=100, epoch_callback=None):
+    def train_dual(self, epochs=100, epoch_callback=None, epoch_offset=0):
         batch_count = len(self.dataloader)
+        epoch_offset += 1
 
         for epoch in range(epochs):
             recons_loss_total = 0
@@ -87,9 +90,9 @@ class VAE_GAN(nn.Module):
                 d_loss_total += d_loss / batch_count
 
                 print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}, Total_Loss: {:.4f}'
-                      .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss, g_loss, d_loss,
+                      .format(epoch + epoch_offset, epochs, batch_number + 1, batch_count, recons_loss, kld_loss, g_loss, d_loss,
                               recons_loss + kld_loss + g_loss + d_loss))
 
             if epoch_callback is not None:
-                epoch_callback(epoch + 1, recons_loss_total,
-                               kld_loss_total, g_loss_total, d_loss_total)
+                epoch_callback(epoch + epoch_offset, recons_loss=recons_loss_total,
+                               kld_loss=kld_loss_total, g_loss=g_loss_total, d_loss=d_loss_total)
