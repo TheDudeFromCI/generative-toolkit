@@ -1,3 +1,6 @@
+from pprint import pprint
+
+
 from model import Model, ModelParameters
 from optimizer import optimize
 
@@ -12,13 +15,16 @@ def main():
 
     parameters.vae_pretraining_epochs = 10
     parameters.epochs = 100
-    print(parameters)
 
-    # optimize(parameters)
-    # print(parameters)
+    print('Optimizing Parameters...')
+    pprint(parameters)
+    optimize(parameters, 100)
 
-    # model = Model(parameters)
-    # model.train()
+    print('Optimized Parameters:')
+    pprint(parameters)
+
+    model = Model(parameters)
+    model.train()
 
 
 if __name__ == '__main__':
