@@ -1,4 +1,5 @@
-from src.model import Model, ModelParameters
+from model import Model, ModelParameters
+from optimizer import optimize
 
 
 def main():
@@ -11,9 +12,13 @@ def main():
 
     parameters.vae_pretraining_epochs = 10
     parameters.epochs = 100
+    print(parameters)
 
-    model = Model(parameters)
-    model.train()
+    # optimize(parameters)
+    # print(parameters)
+
+    # model = Model(parameters)
+    # model.train()
 
 
 if __name__ == '__main__':
