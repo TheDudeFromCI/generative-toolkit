@@ -130,4 +130,5 @@ dmypy.json
 
 /data
 /images
+/models
 bokeh_output.html
