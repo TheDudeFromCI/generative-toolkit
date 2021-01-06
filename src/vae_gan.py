@@ -3,14 +3,14 @@ from torch.cuda import FloatTensor
 from torch.optim import Adam
 from torch.autograd import Variable
 
-from src.vae import VAE
-from src.gan import GAN
-from src.encoder import Encoder
-from src.decoder import Decoder
+from vae import VAE
+from gan import GAN
+from encoder import Encoder
+from decoder import Decoder
 
 
 class VAE_GAN(nn.Module):
-    def __init__(self, image_size, image_channels, latent_dim, dataloader, layers_per_size=2, channel_scaling=2):
+    def __init__(self, image_size, image_channels, latent_dim, dataloader, layers_per_size=2, channel_scaling=2, vae_lr=1e-3, gan_lr=1e-3):
         super().__init__()
         self.image_size = image_size
         self.image_channels = image_channels
@@ -23,8 +23,8 @@ class VAE_GAN(nn.Module):
         self.decoder = Decoder(image_size, image_channels, latent_dim,
                                nn.Sigmoid(), layers_per_size=layers_per_size, channel_scaling=channel_scaling)
 
-        self.vae = VAE(self.encoder, self.decoder, latent_dim)
-        self.gan = GAN(self.encoder, self.decoder, latent_dim)
+        self.vae = VAE(self.encoder, self.decoder, latent_dim, vae_lr)
+        self.gan = GAN(self.encoder, self.decoder, latent_dim, gan_lr)
 
     def train_vae(self, epochs=100, epoch_callback=None):
         batch_count = len(self.dataloader)

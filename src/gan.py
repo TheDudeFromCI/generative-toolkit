@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 
 class Discriminator(nn.Module):
-    def __init__(self, encoder):
+    def __init__(self, encoder, learning_rate):
         super().__init__()
         self.encoder = encoder
 
@@ -24,7 +24,7 @@ class Discriminator(nn.Module):
             nn.Sigmoid(),
         )
 
-        self.optimizer = Adam(self.parameters(), lr=1e-3)
+        self.optimizer = Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, x):
         x = self.encoder(x)
@@ -37,11 +37,11 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, decoder):
+    def __init__(self, decoder, learning_rate):
         super().__init__()
         self.decoder = decoder
 
-        self.optimizer = Adam(self.parameters(), lr=1e-3)
+        self.optimizer = Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, x):
         x = self.decoder(x)
@@ -53,10 +53,10 @@ class Generator(nn.Module):
 
 
 class GAN(nn.Module):
-    def __init__(self, encoder, decoder, latent_dim):
+    def __init__(self, encoder, decoder, latent_dim, learning_rate):
         super().__init__()
-        self.generator = Generator(decoder)
-        self.discriminator = Discriminator(encoder)
+        self.generator = Generator(decoder, learning_rate)
+        self.discriminator = Discriminator(encoder, learning_rate)
         self.latent_dim = latent_dim
 
     def random_z(self, batch_size):

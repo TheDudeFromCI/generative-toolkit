@@ -6,7 +6,7 @@ from torch.nn.modules import flatten
 
 
 class VAE(nn.Module):
-    def __init__(self, encoder, decoder, latent_dim):
+    def __init__(self, encoder, decoder, latent_dim, learning_rate):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
@@ -15,7 +15,7 @@ class VAE(nn.Module):
         self.mu = nn.Linear(channels, latent_dim)
         self.var = nn.Linear(channels, latent_dim)
 
-        self.optimizer = Adam(self.parameters(), lr=1e-3)
+        self.optimizer = Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, x):
         x = self.encoder(x)
