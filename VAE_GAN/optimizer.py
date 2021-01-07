@@ -11,6 +11,7 @@ def optimize(parameters: ModelParameters, trial_count):
         p2.epochs = 3
         p2.save_model = False
         p2.save_snapshots = False
+        p2.print_summary = False
         p2.plot_loss = False
 
         p2.gan_learning_rate = trial.suggest_loguniform('gan_lr', 1e-5, 1e-2)
