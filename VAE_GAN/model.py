@@ -149,13 +149,12 @@ def save_model(model, epoch):
 
 
 def get_dataloader(parameters: ModelParameters):
-    blocks = [transforms.ToTensor()]
+    blocks = [transforms.RandomAffine(45), transforms.ToTensor()]
 
     image_size = parameters.image_size
-    blocks.append(transforms.ColorJitter(0.25, 0.25, 0.5, 0.75))
+    blocks.append(transforms.ColorJitter(0.1, 0.1, 0.2, 0.4))
     blocks.append(transforms.RandomHorizontalFlip())
-    blocks.append(transforms.RandomAffine(45))
-    blocks.append(transforms.RandomResizedCrop(image_size, ratio=(1, 1)))
+    blocks.append(transforms.RandomResizedCrop(image_size))
     transform = transforms.Compose(blocks)
 
     if parameters.database == 'mnist':
