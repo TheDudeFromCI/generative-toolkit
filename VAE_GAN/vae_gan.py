@@ -1,3 +1,5 @@
+from tqdm import tqdm
+
 from torch import nn
 from torch.cuda import FloatTensor
 from torch.optim import Adam
@@ -33,16 +35,15 @@ class VAE_GAN(nn.Module):
             recons_loss_total = 0
             kld_loss_total = 0
 
-            for batch_number, sample in enumerate(self.dataloader):
-                sample = Variable(sample[0].type(FloatTensor))
-                recons_loss, kld_loss = self.vae.train_batch(sample)
+            with tqdm(range(batch_count), leave=print_info) as prog_bar:
+                for _, sample in enumerate(self.dataloader):
+                    sample = Variable(sample[0].type(FloatTensor))
+                    recons_loss, kld_loss = self.vae.train_batch(sample)
 
-                recons_loss_total += recons_loss / batch_count
-                kld_loss_total += kld_loss / batch_count
+                    recons_loss_total += recons_loss / batch_count
+                    kld_loss_total += kld_loss / batch_count
 
-                if print_info:
-                    print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}'
-                          .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss))
+                    prog_bar.update(1)
 
             if epoch_callback is not None:
                 epoch_callback(
@@ -55,16 +56,15 @@ class VAE_GAN(nn.Module):
             g_loss_total = 0
             d_loss_total = 0
 
-            for batch_number, sample in enumerate(self.dataloader):
-                sample = Variable(sample[0].type(FloatTensor))
-                d_loss, g_loss = self.gan.train_batch(sample)
+            with tqdm(range(batch_count), leave=print_info) as prog_bar:
+                for _, sample in enumerate(self.dataloader):
+                    sample = Variable(sample[0].type(FloatTensor))
+                    d_loss, g_loss = self.gan.train_batch(sample)
 
-                g_loss_total += g_loss / batch_count
-                d_loss_total += d_loss / batch_count
+                    g_loss_total += g_loss / batch_count
+                    d_loss_total += d_loss / batch_count
 
-                if print_info:
-                    print('[Epoch {}/{}] (Batch {}/{}) G_Loss: {:.4f}, D_Loss: {:.4f}'
-                          .format(epoch + 1, epochs, batch_number + 1, batch_count, g_loss, d_loss))
+                    prog_bar.update(1)
 
             if epoch_callback is not None:
                 epoch_callback(epoch + 1, g_loss=g_loss_total,
@@ -80,21 +80,19 @@ class VAE_GAN(nn.Module):
             g_loss_total = 0
             d_loss_total = 0
 
-            for batch_number, sample in enumerate(self.dataloader):
-                sample = Variable(sample[0].type(FloatTensor))
+            with tqdm(range(batch_count), leave=print_info) as prog_bar:
+                for _, sample in enumerate(self.dataloader):
+                    sample = Variable(sample[0].type(FloatTensor))
 
-                g_loss, d_loss = self.gan.train_batch(sample)
-                recons_loss, kld_loss = self.vae.train_batch(sample)
+                    g_loss, d_loss = self.gan.train_batch(sample)
+                    recons_loss, kld_loss = self.vae.train_batch(sample)
 
-                recons_loss_total += recons_loss / batch_count
-                kld_loss_total += kld_loss / batch_count
-                g_loss_total += g_loss / batch_count
-                d_loss_total += d_loss / batch_count
+                    recons_loss_total += recons_loss / batch_count
+                    kld_loss_total += kld_loss / batch_count
+                    g_loss_total += g_loss / batch_count
+                    d_loss_total += d_loss / batch_count
 
-                if print_info:
-                    print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}, Total_Loss: {:.4f}'
-                          .format(epoch + epoch_offset, epochs, batch_number + 1, batch_count, recons_loss, kld_loss, g_loss, d_loss,
-                                  recons_loss + kld_loss + g_loss + d_loss))
+                    prog_bar.update(1)
 
             if epoch_callback is not None:
                 epoch_callback(epoch + epoch_offset, recons_loss=recons_loss_total,
