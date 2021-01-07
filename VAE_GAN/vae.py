@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from torch.optim import Adam
 from torch.nn import functional as F
-from torch.nn.modules import flatten
 
 
 class VAE(nn.Module):

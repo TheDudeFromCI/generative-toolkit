@@ -3,10 +3,10 @@ from torch.cuda import FloatTensor
 from torch.optim import Adam
 from torch.autograd import Variable
 
-from vae import VAE
-from gan import GAN
-from encoder import Encoder
-from decoder import Decoder
+from .vae import VAE
+from .gan import GAN
+from .encoder import Encoder
+from .decoder import Decoder
 
 
 class VAE_GAN(nn.Module):

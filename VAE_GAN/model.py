@@ -10,8 +10,8 @@ from torchvision.utils import save_image
 from torch.autograd import Variable
 from torchinfo import summary
 
-from vae_gan import VAE_GAN
-from image_dataset import ImageDataset
+from .vae_gan import VAE_GAN
+from .image_dataset import ImageDataset
 
 from torchvision import transforms
 from torch.utils.data import DataLoader

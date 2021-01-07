@@ -1,7 +1,6 @@
-import torch
 from torch import nn
 
-from residual_block import ResidualBlock
+from .residual_block import ResidualBlock
 from echoAI.Activation.Torch.mish import Mish
 
 

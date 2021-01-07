@@ -1,7 +1,7 @@
 import optuna
 from copy import copy
 
-from model import Model, ModelParameters
+from .model import Model, ModelParameters
 
 
 def optimize(parameters: ModelParameters, trial_count):

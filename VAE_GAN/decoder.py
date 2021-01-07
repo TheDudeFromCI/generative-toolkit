@@ -1,6 +1,6 @@
 from torch import nn
 
-from residual_block import ResidualBlock
+from .residual_block import ResidualBlock
 
 
 class Upscaler(nn.Module):
