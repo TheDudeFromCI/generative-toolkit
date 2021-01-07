@@ -26,7 +26,7 @@ class VAE_GAN(nn.Module):
         self.vae = VAE(self.encoder, self.decoder, latent_dim, vae_lr)
         self.gan = GAN(self.encoder, self.decoder, latent_dim, gan_lr)
 
-    def train_vae(self, epochs=100, epoch_callback=None):
+    def train_vae(self, epochs=100, epoch_callback=None, print_info=True):
         batch_count = len(self.dataloader)
 
         for epoch in range(epochs):
@@ -40,14 +40,15 @@ class VAE_GAN(nn.Module):
                 recons_loss_total += recons_loss / batch_count
                 kld_loss_total += kld_loss / batch_count
 
-                print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}'
-                      .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss))
+                if print_info:
+                    print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}'
+                          .format(epoch + 1, epochs, batch_number + 1, batch_count, recons_loss, kld_loss))
 
             if epoch_callback is not None:
                 epoch_callback(
                     epoch + 1, recons_loss=recons_loss_total, kld_loss=kld_loss_total)
 
-    def train_gan(self, epochs=100, epoch_callback=None):
+    def train_gan(self, epochs=100, epoch_callback=None, print_info=True):
         batch_count = len(self.dataloader)
 
         for epoch in range(epochs):
@@ -61,14 +62,15 @@ class VAE_GAN(nn.Module):
                 g_loss_total += g_loss / batch_count
                 d_loss_total += d_loss / batch_count
 
-                print('[Epoch {}/{}] (Batch {}/{}) G_Loss: {:.4f}, D_Loss: {:.4f}'
-                      .format(epoch + 1, epochs, batch_number + 1, batch_count, g_loss, d_loss))
+                if print_info:
+                    print('[Epoch {}/{}] (Batch {}/{}) G_Loss: {:.4f}, D_Loss: {:.4f}'
+                          .format(epoch + 1, epochs, batch_number + 1, batch_count, g_loss, d_loss))
 
             if epoch_callback is not None:
                 epoch_callback(epoch + 1, g_loss=g_loss_total,
                                d_loss=d_loss_total)
 
-    def train_dual(self, epochs=100, epoch_callback=None, epoch_offset=0):
+    def train_dual(self, epochs=100, epoch_callback=None, epoch_offset=0, print_info=True):
         batch_count = len(self.dataloader)
         epoch_offset += 1
 
@@ -89,9 +91,10 @@ class VAE_GAN(nn.Module):
                 g_loss_total += g_loss / batch_count
                 d_loss_total += d_loss / batch_count
 
-                print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}, Total_Loss: {:.4f}'
-                      .format(epoch + epoch_offset, epochs, batch_number + 1, batch_count, recons_loss, kld_loss, g_loss, d_loss,
-                              recons_loss + kld_loss + g_loss + d_loss))
+                if print_info:
+                    print('[Epoch {}/{}] (Batch {}/{}) Recon_Loss: {:.4f}, KLD_Loss: {:.4f}, G_Loss: {:.4f}, D_Loss: {:.4f}, Total_Loss: {:.4f}'
+                          .format(epoch + epoch_offset, epochs, batch_number + 1, batch_count, recons_loss, kld_loss, g_loss, d_loss,
+                                  recons_loss + kld_loss + g_loss + d_loss))
 
             if epoch_callback is not None:
                 epoch_callback(epoch + epoch_offset, recons_loss=recons_loss_total,

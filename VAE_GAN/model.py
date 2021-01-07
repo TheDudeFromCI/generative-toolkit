@@ -41,6 +41,7 @@ class ModelParameters:
         self.plot_loss = True
         self.cuda = True
         self.epoch_callback = None
+        self.print_info = True
 
     @property
     def total_layers(self):
@@ -107,11 +108,11 @@ class Model:
         if self.parameters.vae_pretraining_epochs > 0:
             print('Pre-training VAE.')
             self.vae_gan.train_vae(epochs=self.parameters.vae_pretraining_epochs,
-                                   epoch_callback=self._epoch_callback)
+                                   epoch_callback=self._epoch_callback, print_info=self.parameters.print_info)
 
         print('Converting to dual-training.')
         self.vae_gan.train_dual(epochs=self.parameters.epochs, epoch_offset=self.parameters.vae_pretraining_epochs,
-                                epoch_callback=self._epoch_callback)
+                                epoch_callback=self._epoch_callback, print_info=self.parameters.print_info)
 
         self.vae_gan.eval()
 
