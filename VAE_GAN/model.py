@@ -106,11 +106,15 @@ class Model:
         self.vae_gan.train()
 
         if self.parameters.vae_pretraining_epochs > 0:
-            print('Pre-training VAE.')
+            if self.parameters.print_info:
+                print('Pre-training VAE.')
+
             self.vae_gan.train_vae(epochs=self.parameters.vae_pretraining_epochs,
                                    epoch_callback=self._epoch_callback, print_info=self.parameters.print_info)
 
-        print('Converting to dual-training.')
+        if self.parameters.print_info:
+            print('Converting to dual-training.')
+
         self.vae_gan.train_dual(epochs=self.parameters.epochs, epoch_offset=self.parameters.vae_pretraining_epochs,
                                 epoch_callback=self._epoch_callback, print_info=self.parameters.print_info)
 
