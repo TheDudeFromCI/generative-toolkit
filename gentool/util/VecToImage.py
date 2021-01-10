@@ -42,7 +42,7 @@ class VecToImage(nn.Module):
                 channels = out_channels
 
         blocks.append(ResidualBlock(initial_channels, image_channels, image_size,
-                                    activation=activation, normalization='group'))
+                                    activation=activation, normalization='group', skip_connections=False))
 
         self.conv = nn.Sequential(*blocks)
 

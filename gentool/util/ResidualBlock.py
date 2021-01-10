@@ -43,11 +43,12 @@ def get_normalization(norm_name, channels, image_size, learnable_params):
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, image_size, activation=nn.LeakyReLU(), bias=True, kernel=3,
-                 normalization='batch', learnable_params=True):
+                 normalization='batch', learnable_params=True, skip_connections=True):
         super().__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
+        self.skip_connections = skip_connections and in_channels == out_channels
 
         hidden_channels = min(in_channels, out_channels)
 
@@ -70,7 +71,7 @@ class ResidualBlock(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
 
-        if self.in_channels == self.out_channels:
+        if self.skip_connections:
             x += res
 
         x = self.activation(x)
