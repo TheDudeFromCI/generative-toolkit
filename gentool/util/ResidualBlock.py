@@ -18,7 +18,7 @@ def best_group_count(channels):
             best_count = i
             best_dist = dist
 
-    return best_count
+    return int(best_count)
 
 
 def get_normalization(norm_name, channels, image_size, learnable_params):
@@ -29,7 +29,7 @@ def get_normalization(norm_name, channels, image_size, learnable_params):
         return nn.BatchNorm2d(channels)
 
     if norm_name == 'group':
-        groups = channels / 16
+        groups = best_group_count(channels)
         return nn.GroupNorm(groups, channels)
 
     if norm_name == 'layer':
