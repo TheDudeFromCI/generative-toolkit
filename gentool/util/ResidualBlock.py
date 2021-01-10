@@ -42,7 +42,7 @@ def get_normalization(norm_name, channels, image_size, learnable_params):
 
 
 class ResidualBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, image_size, activation, bias=True, kernel=3,
+    def __init__(self, in_channels, out_channels, image_size, activation=nn.LeakyReLU(), bias=True, kernel=3,
                  normalization='batch', learnable_params=True):
         super().__init__()
 
