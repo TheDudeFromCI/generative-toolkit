@@ -21,6 +21,7 @@ class VecToImage(nn.Module):
         for index, dense in enumerate(dense_layers):
             next_layer = dense_layers[index + 1] if index < len(dense_layers) - 1 else max_channels
             blocks.append(nn.Linear(dense, next_layer))
+            blocks.append(activation)
 
         blocks.append(nn.Unflatten(dim=1, unflattened_size=(max_channels, 1, 1)))
 

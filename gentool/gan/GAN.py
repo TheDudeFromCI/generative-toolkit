@@ -24,16 +24,26 @@ class GAN(nn.Module):
         self.latent_dim = latent_dim
         self.initial_channels = initial_channels
 
-        self.generator = VecToImage(image_size, image_channels, layers_per_size,
-                                    initial_channels=initial_channels, dense_layers=(latent_dim, floor(latent_dim / 4)))
-        self.discriminator = nn.Sequential(
-            ImageToVec(image_size, image_channels, layers_per_size,
-                       initial_channels=initial_channels, dense_layers=(latent_dim, floor(latent_dim / 4), 1)),
-            nn.Sigmoid()
-        )
+        self.generator = VecToImage(image_size,
+                                    image_channels,
+                                    layers_per_size,
+                                    initial_channels=initial_channels,
+                                    dense_layers=(latent_dim, floor(latent_dim / 4)))
+
+        self.discriminator = ImageToVec(image_size,
+                                        image_channels,
+                                        layers_per_size,
+                                        initial_channels=initial_channels,
+                                        dense_layers=(latent_dim, floor(latent_dim / 4), 1),
+                                        output_activation=nn.Sigmoid())
 
         self.optimizer_g = Adam(self.generator.parameters(), lr=learning_rate)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=learning_rate)
+
+    def forward(self, x):
+        z = self.random_z(len(x))
+        gen = self.generator(z)
+        return self.discriminator(gen)
 
     def random_z(self, batch_size):
         return Variable(FloatTensor(np.random.normal(
