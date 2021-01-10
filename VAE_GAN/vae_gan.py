@@ -31,11 +31,11 @@ class VAE_GAN(nn.Module):
     def train_vae(self, epochs=100, epoch_callback=None, print_info=True):
         batch_count = len(self.dataloader)
 
-        for epoch in range(epochs):
-            recons_loss_total = 0
-            kld_loss_total = 0
+        with tqdm(range(batch_count), leave=print_info) as prog_bar:
+            for epoch in range(epochs):
+                recons_loss_total = 0
+                kld_loss_total = 0
 
-            with tqdm(range(batch_count), leave=print_info) as prog_bar:
                 for _, sample in enumerate(self.dataloader):
                     sample = Variable(sample[0].type(FloatTensor))
                     recons_loss, kld_loss = self.vae.train_batch(sample)
@@ -45,18 +45,18 @@ class VAE_GAN(nn.Module):
 
                     prog_bar.update(1)
 
-            if epoch_callback is not None:
-                epoch_callback(
-                    epoch + 1, recons_loss=recons_loss_total, kld_loss=kld_loss_total)
+                if epoch_callback is not None:
+                    epoch_callback(
+                        epoch + 1, recons_loss=recons_loss_total, kld_loss=kld_loss_total)
 
     def train_gan(self, epochs=100, epoch_callback=None, print_info=True):
         batch_count = len(self.dataloader)
 
-        for epoch in range(epochs):
-            g_loss_total = 0
-            d_loss_total = 0
+        with tqdm(range(batch_count), leave=print_info) as prog_bar:
+            for epoch in range(epochs):
+                g_loss_total = 0
+                d_loss_total = 0
 
-            with tqdm(range(batch_count), leave=print_info) as prog_bar:
                 for _, sample in enumerate(self.dataloader):
                     sample = Variable(sample[0].type(FloatTensor))
                     d_loss, g_loss = self.gan.train_batch(sample)
@@ -66,21 +66,21 @@ class VAE_GAN(nn.Module):
 
                     prog_bar.update(1)
 
-            if epoch_callback is not None:
-                epoch_callback(epoch + 1, g_loss=g_loss_total,
-                               d_loss=d_loss_total)
+                if epoch_callback is not None:
+                    epoch_callback(epoch + 1, g_loss=g_loss_total,
+                                   d_loss=d_loss_total)
 
     def train_dual(self, epochs=100, epoch_callback=None, epoch_offset=0, print_info=True):
         batch_count = len(self.dataloader)
         epoch_offset += 1
 
-        for epoch in range(epochs):
-            recons_loss_total = 0
-            kld_loss_total = 0
-            g_loss_total = 0
-            d_loss_total = 0
+        with tqdm(range(batch_count * epochs), leave=print_info) as prog_bar:
+            for epoch in range(epochs):
+                recons_loss_total = 0
+                kld_loss_total = 0
+                g_loss_total = 0
+                d_loss_total = 0
 
-            with tqdm(range(batch_count), leave=print_info) as prog_bar:
                 for _, sample in enumerate(self.dataloader):
                     sample = Variable(sample[0].type(FloatTensor))
 
@@ -94,6 +94,6 @@ class VAE_GAN(nn.Module):
 
                     prog_bar.update(1)
 
-            if epoch_callback is not None:
-                epoch_callback(epoch + epoch_offset, recons_loss=recons_loss_total,
-                               kld_loss=kld_loss_total, g_loss=g_loss_total, d_loss=d_loss_total)
+                if epoch_callback is not None:
+                    epoch_callback(epoch + epoch_offset, recons_loss=recons_loss_total,
+                                   kld_loss=kld_loss_total, g_loss=g_loss_total, d_loss=d_loss_total)
