@@ -1,7 +1,7 @@
 from pprint import pprint
 
 
-from VAE_GAN import Model, ModelParameters, optimize
+from gentool import Model, ModelParameters, optimize
 
 
 def main():
