@@ -13,7 +13,7 @@ from torchinfo import summary
 from .vae_gan import VAE_GAN
 from .image_dataset import ImageDataset
 
-from torchvision import transforms
+import torchvision.transforms as T
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10, MNIST
 
@@ -81,6 +81,10 @@ class Model:
         self.g_loss = g_loss
         self.d_loss = d_loss
 
+        if self.parameters.print_info:
+            print('Finished epoch {} with a loss of {:.4f}.'.format(
+                epoch, recons_loss))
+
         if self.parameters.save_snapshots:
             save_vae_snapshot(self.vae_gan.vae, self.dataloader,
                               epoch, self.parameters.cuda)
@@ -99,8 +103,9 @@ class Model:
             self.liveloss.update(logs, current_step=epoch)
             self.liveloss.send()
 
-        if self.epoch_callback:
-            self.epoch_callback(epoch, recons_loss, kld_loss, g_loss, d_loss)
+        if self.parameters.epoch_callback:
+            self.parameters.epoch_callback(
+                epoch, recons_loss, kld_loss, g_loss, d_loss)
 
     def train(self):
         self.vae_gan.train()
@@ -149,13 +154,13 @@ def save_model(model, epoch):
 
 
 def get_dataloader(parameters: ModelParameters):
-    blocks = [transforms.RandomAffine(45), transforms.ToTensor()]
+    blocks = [T.RandomAffine(45), T.ToTensor()]
 
     image_size = parameters.image_size
-    blocks.append(transforms.ColorJitter(0.1, 0.1, 0.2, 0.4))
-    blocks.append(transforms.RandomHorizontalFlip())
-    blocks.append(transforms.RandomResizedCrop(image_size))
-    transform = transforms.Compose(blocks)
+    blocks.append(T.RandomResizedCrop(image_size, scale=(0.333, 1.0)))
+    blocks.append(T.ColorJitter(0.1, 0.1, 0.2, 0.4))
+    blocks.append(T.RandomHorizontalFlip())
+    transform = T.Compose(blocks)
 
     if parameters.database == 'mnist':
         dataset = MNIST(parameters.database_path, train=True,
@@ -169,4 +174,5 @@ def get_dataloader(parameters: ModelParameters):
     else:
         raise ValueError('Unknown database: ' + parameters.database)
 
-    return DataLoader(dataset, batch_size=parameters.batch_size, shuffle=True, drop_last=True)
+    return DataLoader(dataset, batch_size=parameters.batch_size, shuffle=True,
+                      drop_last=True, num_workers=8)
