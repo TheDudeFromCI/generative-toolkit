@@ -1,2 +1,3 @@
-# VAE-GAN
-An implementation for stabalized the training of a GAN agent by pretraining the network using a VAE.
+# generative-toolkit
+
+A personal library for common generative machine learning resources, utilities, and applications. 
