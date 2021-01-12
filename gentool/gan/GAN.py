@@ -15,7 +15,7 @@ from gentool.util.VecToImage import VecToImage
 
 
 class GAN(nn.Module):
-    def __init__(self, image_size, image_channels, layers_per_size, latent_dim, initial_channels=4, learning_rate=1e-3):
+    def __init__(self, image_size, image_channels, layers_per_size, latent_dim, initial_channels=4, learning_rate=1e-4):
         super().__init__()
 
         self.image_size = image_size
@@ -28,13 +28,13 @@ class GAN(nn.Module):
                                     image_channels,
                                     layers_per_size,
                                     initial_channels=initial_channels,
-                                    dense_layers=(latent_dim, floor(latent_dim / 4)))
+                                    dense_layers=(latent_dim, latent_dim))
 
         self.discriminator = ImageToVec(image_size,
                                         image_channels,
                                         layers_per_size,
                                         initial_channels=initial_channels,
-                                        dense_layers=(latent_dim, floor(latent_dim / 4), 1),
+                                        dense_layers=(latent_dim, floor(latent_dim / 2), 1),
                                         output_activation=nn.Sigmoid())
 
         self.optimizer_g = Adam(self.generator.parameters(), lr=learning_rate)
@@ -46,27 +46,28 @@ class GAN(nn.Module):
         return self.discriminator(gen)
 
     def random_z(self, batch_size):
-        return Variable(FloatTensor(np.random.normal(
-            0, 1, (batch_size, self.latent_dim))))
+        return Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.latent_dim))))
 
     def d_loop(self, d_real_data, d_gen_input=None):
         self.optimizer_d.zero_grad()
 
-        target = Variable(FloatTensor(np.zeros((len(d_real_data), 1))))
+        target = Variable(FloatTensor(np.ones((len(d_real_data), 1))))
 
         d_real_decision = self.discriminator(d_real_data)
-        d_real_error = F.binary_cross_entropy(d_real_decision, target)
+        d_real_error = F.mse_loss(d_real_decision, target)
 
         if d_gen_input is None:
             d_gen_input = self.random_z(len(d_real_data))
 
         with torch.no_grad():
-            d_fake_data = self.generator(d_gen_input)
-        d_fake_decision = self.discriminator(d_fake_data)
+            g_fake_data = self.generator(d_gen_input)
+            g_fake_data += Variable(FloatTensor(np.random.normal(0, 0.1, g_fake_data.shape)))
 
-        target = Variable(FloatTensor(np.ones((len(d_real_data), 1))))
+        d_fake_decision = self.discriminator(g_fake_data)
 
-        d_fake_error = F.binary_cross_entropy(d_fake_decision, target)
+        target = Variable(FloatTensor(np.zeros((len(g_fake_data), 1))))
+
+        d_fake_error = F.mse_loss(d_fake_decision, target)
 
         d_loss = d_real_error + d_fake_error
         d_loss.backward()
@@ -88,8 +89,9 @@ class GAN(nn.Module):
         target = Variable(FloatTensor(np.ones((len(d_real_data), 1))))
 
         g_fake_data = self.generator(gen_input)
+        g_fake_data = g_fake_data + Variable(FloatTensor(np.random.normal(0, 0.1, g_fake_data.shape)))
         dg_fake_decision = self.discriminator(g_fake_data)
-        g_error = F.binary_cross_entropy(dg_fake_decision, target)
+        g_error = F.mse_loss(dg_fake_decision, target)
 
         g_error.backward()
         self.optimizer_g.step()
