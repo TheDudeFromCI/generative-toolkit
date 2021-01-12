@@ -21,16 +21,12 @@ class ImageToVec(nn.Module):
             image_size >>= 1
 
             for i in range(layers_per_size):
-                if i == layers_per_size - 1:
-                    out_channels = int(channels * 2)
-                    blocks.append(nn.MaxPool2d(2, 2))
-                else:
-                    out_channels = channels
-
-                blocks.append(ResidualBlock(channels, out_channels, image_size,
+                blocks.append(ResidualBlock(channels, channels, image_size,
                                             activation=activation, normalization='group'))
 
-                channels = out_channels
+                if i == layers_per_size - 1:
+                    c_old, channels = channels, int(channels * 2)
+                    blocks.append(nn.Conv2d(c_old, channels, 3, 2, 1))
 
         blocks.append(nn.Flatten())
 

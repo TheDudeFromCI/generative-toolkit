@@ -31,21 +31,14 @@ class VecToImage(nn.Module):
             min_size <<= 1
 
             for i in range(layers_per_size):
-                if i == layers_per_size - 1:
-                    out_channels = int(channels / 2)
-                    blocks.append(nn.Upsample(scale_factor=2))
-                else:
-                    out_channels = channels
+                if i == 0:
+                    c_old, channels = channels, int(channels / 2)
+                    blocks.append(nn.ConvTranspose2d(c_old, channels, 4, 2, 1))
 
-                blocks.append(ResidualBlock(channels, out_channels, image_size,
+                blocks.append(ResidualBlock(channels, channels, image_size,
                                             activation=activation, normalization='group'))
 
-                channels = out_channels
-
-        blocks.append(ResidualBlock(initial_channels, image_channels, image_size,
-                                    activation=activation, normalization='group', skip_connections=False))
-
-        blocks.append(nn.Conv2d(image_channels, image_channels, 1, 1))
+        blocks.append(nn.Conv2d(channels, image_channels, 3, 1, 1))
         blocks.append(output_activation)
 
         self.conv = nn.Sequential(*blocks)
