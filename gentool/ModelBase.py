@@ -72,6 +72,7 @@ class ImageModelBase(ModelBase):
         super().__init__(dataloader)
 
         self.save_snapshot_rate = 100
+        self.save_snapshot_count = 25
 
     def batch_callback(self, update_number, losses):
         super().batch_callback(update_number, losses)
@@ -82,9 +83,8 @@ class ImageModelBase(ModelBase):
     def save_snapshot(self, update_number):
         os.makedirs('images', exist_ok=True)
 
-        count = self.dataloader.batch_size
-        images = self.sample_images(count)
-        rows = floor(sqrt(count))
+        images = self.sample_images(self.save_snapshot_count)
+        rows = floor(sqrt(self.save_snapshot_count))
 
         filename = 'images/up-{}.{}.png'.format(update_number, time())
         save_image(images, filename, nrow=rows)
