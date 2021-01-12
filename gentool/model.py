@@ -11,7 +11,7 @@ from torch.autograd import Variable
 from torchinfo import summary
 
 from .vae_gan import VAE_GAN
-from .image_dataset import ImageDataset
+from .database.image_dataset import ImageDataset
 
 import torchvision.transforms as T
 from torch.utils.data import DataLoader
