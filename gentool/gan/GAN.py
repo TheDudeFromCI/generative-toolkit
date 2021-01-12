@@ -1,4 +1,5 @@
 import copy
+from gentool.ModelBase import ImageModelBase
 
 import numpy as np
 from math import floor
@@ -9,14 +10,15 @@ from torch.cuda import FloatTensor
 from torch.autograd import Variable
 from torch.optim.adam import Adam
 import torch.nn.functional as F
+from torchinfo import summary
 
 from gentool.util.ImageToVec import ImageToVec
 from gentool.util.VecToImage import VecToImage
 
 
-class GAN(nn.Module):
-    def __init__(self, image_size, image_channels, layers_per_size, latent_dim, initial_channels=4, learning_rate=1e-4):
-        super().__init__()
+class GAN(ImageModelBase):
+    def __init__(self, dataloader, image_size, image_channels, layers_per_size, latent_dim, initial_channels=4, learning_rate=1e-4):
+        super().__init__(dataloader)
 
         self.image_size = image_size
         self.image_channels = image_channels
@@ -40,10 +42,7 @@ class GAN(nn.Module):
         self.optimizer_g = Adam(self.generator.parameters(), lr=learning_rate)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=learning_rate)
 
-    def forward(self, x):
-        z = self.random_z(len(x))
-        gen = self.generator(z)
-        return self.discriminator(gen)
+        summary(self)
 
     def random_z(self, batch_size):
         return Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.latent_dim))))
@@ -102,7 +101,7 @@ class GAN(nn.Module):
 
         return g_error.item()
 
-    def g_sample(self, count):
+    def sample_images(self, count):
         z = self.random_z(count)
         return self.generator(z)
 
@@ -110,3 +109,6 @@ class GAN(nn.Module):
         d_loss = self.d_loop(batch)
         g_loss = self.g_loop(batch, 0)
         return [g_loss, d_loss]
+
+    def loss_names_and_groups(self):
+        return ['g_loss', 'd_loss'], {'GAN': ['g_loss', 'd_loss']}
