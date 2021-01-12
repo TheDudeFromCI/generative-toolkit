@@ -6,7 +6,7 @@ from torch import nn
 
 class VecToImage(nn.Module):
     def __init__(self, image_size, image_channels, layers_per_size, initial_channels=4,
-                 activation=nn.LeakyReLU(inplace=True), dense_layers=(64)):
+                 activation=nn.LeakyReLU(inplace=True), dense_layers=(64), output_activation=nn.Tanh()):
         super().__init__()
 
         self.image_size = image_size
@@ -44,6 +44,9 @@ class VecToImage(nn.Module):
 
         blocks.append(ResidualBlock(initial_channels, image_channels, image_size,
                                     activation=activation, normalization='group', skip_connections=False))
+
+        blocks.append(nn.Conv2d(image_channels, image_channels, 1, 1, 1))
+        blocks.append(output_activation)
 
         self.conv = nn.Sequential(*blocks)
 
