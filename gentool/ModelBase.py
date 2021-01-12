@@ -21,7 +21,7 @@ class ModelBase(nn.Module):
 
         loss_names, loss_groups = self.loss_names_and_groups()
         self.loss_names = loss_names
-        self.liveloss = PlotLosses(groups=loss_groups)
+        self.liveloss = PlotLosses(outputs=['MatplotlibPlot'], groups=loss_groups)
 
     def save_model(self, update_number):
         os.makedirs('models', exist_ok=True)
@@ -47,7 +47,7 @@ class ModelBase(nn.Module):
         self.liveloss.update(logs, update_number)
         self.liveloss.send()
 
-        if update_number % self.save_model_rate:
+        if update_number % self.save_model_rate == 0:
             self.save_model(update_number)
 
     def format_logs(self, losses):
@@ -76,7 +76,7 @@ class ImageModelBase(ModelBase):
     def batch_callback(self, update_number, losses):
         super().batch_callback(update_number, losses)
 
-        if update_number % self.save_snapshot_rate:
+        if update_number % self.save_snapshot_rate == 0:
             self.save_snapshot(update_number)
 
     def save_snapshot(self, update_number):
