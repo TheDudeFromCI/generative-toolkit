@@ -1,49 +1,17 @@
-from os import listdir
-from os.path import join as join_path
+from math import floor
 
-from random import randint
-from PIL import Image, UnidentifiedImageError
-
-import torch
 from torch.cuda import FloatTensor
+from torch.utils.data import DataLoader
 from torch.autograd.variable import Variable
 
-from gentool.database.EmptyDatabaseError import EmptyDatabaseError
+from gentool.database.image_dataset import ImageDataset
 
 
-class ImageDataLoader:
-    def __init__(self, folders, batch_size, transform, format='RGB'):
-        self.batch_size = batch_size
-        self.transform = transform
-        self.format = format
-        self.files = []
+def image_dataloader(folders, batch_size, transform, format='RGB'):
+    dataloader = DataLoader(ImageDataset(folders, transform, format, infinite=True), batch_size=batch_size,
+                            shuffle=True, num_workers=8, prefetch_factor=floor(batch_size*2/8),
+                            persistent_workers=True)
 
-        for folder in folders:
-            for file in listdir(folder):
-                self.files.append(join_path(folder, file))
-
-    def _random_file(self):
-        while len(self.files) > 0:
-            index = randint(0, len(self.files) - 1)
-            img_name = self.files[index]
-
-            try:
-                image = Image.open(img_name).convert(self.format)
-                return self.transform(image)
-            except UnidentifiedImageError:
-                # File cannot be loaded. Remove from file list
-                self.files.remove(img_name)
-                continue
-
-        raise EmptyDatabaseError
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        samples = []
-        for _ in range(self.batch_size):
-            samples.append(self._random_file())
-
-        tensor = torch.stack(samples)
-        return Variable(tensor.type(FloatTensor))
+    for _, batch in enumerate(dataloader):
+        batch = Variable(batch[0].type(FloatTensor))
+        yield batch

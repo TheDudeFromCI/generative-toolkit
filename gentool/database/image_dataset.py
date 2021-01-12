@@ -7,9 +7,10 @@ from PIL import Image, UnidentifiedImageError
 
 
 class ImageDataset(Dataset):
-    def __init__(self, folders, transform, format='RGB'):
+    def __init__(self, folders, transform, format='RGB', infinite=False):
         self.transform = transform
         self.format = format
+        self.infinite = infinite
         self.files = []
 
         for folder in folders:
@@ -17,10 +18,13 @@ class ImageDataset(Dataset):
                 self.files.append(join_path(folder, file))
 
     def __len__(self):
-        return len(self.files)
+        if self.infinite:
+            return 2 ** 32 - 1
+        else:
+            return len(self.files)
 
     def __getitem__(self, index):
-        img_name = self.files[index]
+        img_name = self.files[index % len(self.files)]
 
         try:
             image = Image.open(img_name).convert(self.format)
