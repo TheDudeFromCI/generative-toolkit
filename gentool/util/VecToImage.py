@@ -45,7 +45,7 @@ class VecToImage(nn.Module):
         blocks.append(ResidualBlock(initial_channels, image_channels, image_size,
                                     activation=activation, normalization='group', skip_connections=False))
 
-        blocks.append(nn.Conv2d(image_channels, image_channels, 1, 1, 1))
+        blocks.append(nn.Conv2d(image_channels, image_channels, 1, 1))
         blocks.append(output_activation)
 
         self.conv = nn.Sequential(*blocks)
