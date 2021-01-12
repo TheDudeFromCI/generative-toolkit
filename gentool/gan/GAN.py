@@ -42,46 +42,44 @@ class GAN(ImageModelBase):
         self.optimizer_g = Adam(self.generator.parameters(), lr=learning_rate)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=learning_rate)
 
-        summary(self)
+        self.cuda()
+        summary(self, depth=1)
 
     def sample_images(self, count):
-        z = self.random_z(count)
+        z = Variable(FloatTensor(np.random.normal(0, 1, (count, self.latent_dim))))
         return self.generator(z)
 
     def train_batch(self, batch):
         # Initialize
-        self.optimizer_d.zero_grad()
-        self.optimizer_g.zero_grad()
-
         batch_size = len(batch)
         zeros = Variable(FloatTensor(np.zeros((batch_size, 1))))
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
         z_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.latent_dim))))
-        real_input_noise = Variable(FloatTensor(np.random.normal(0, 0.1, batch.shape)))
-        fake_input_noise = Variable(FloatTensor(np.random.normal(0, 0.1, batch.shape)))
+        real_input_noise = torch.randn_like(batch)
+        fake_input_noise = torch.randn_like(batch)
 
         # Update generator
+        self.optimizer_g.zero_grad()
         g_fake_data = self.generator(z_noise) + fake_input_noise
+        dg_fake_decision = self.discriminator(g_fake_data)
 
-        with torch.no_grad():
-            dg_fake_decision = self.discriminator(g_fake_data)
-            g_loss = F.mse_loss(dg_fake_decision, ones)
-
+        g_loss = F.mse_loss(dg_fake_decision, ones)
         g_loss.backward()
         self.optimizer_g.step()
 
         # Update discriminator
-        d_real_decision = self.discriminator(batch + real_input_noise)
-        d_real_error = F.mse_loss(d_real_decision, ones)
+        g_fake_data = Variable(g_fake_data.data)
+        total_input = torch.cat([batch + real_input_noise, g_fake_data])
+        total_target = torch.cat([ones, zeros])
 
-        d_fake_decision = self.discriminator(g_fake_data)
-        d_fake_error = F.mse_loss(d_fake_decision, zeros)
-        d_loss = d_real_error + d_fake_error
+        self.optimizer_d.zero_grad()
+        d_real_decision = self.discriminator(total_input)
 
+        d_loss = F.mse_loss(d_real_decision, total_target)
         d_loss.backward()
         self.optimizer_d.step()
 
-        return [g_loss, d_loss]
+        return [g_loss.item(), d_loss.item()]
 
     def loss_names_and_groups(self):
         return ['g_loss', 'd_loss'], {'GAN': ['g_loss', 'd_loss']}
