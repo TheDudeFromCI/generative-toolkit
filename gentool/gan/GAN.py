@@ -34,6 +34,7 @@ class GanHyperParameters():
         self.generator_dense_layers = (32, 32)
         self.discriminator_dense_layers = (32, 16, 1)
         self.dropout = 0.4
+        self.normalization = 'group'
 
 
 class GAN(ImageModelBase):
@@ -50,7 +51,8 @@ class GAN(ImageModelBase):
                                     initial_channels=hyper_parameters.initial_channels,
                                     dense_layers=hyper_parameters.generator_dense_layers,
                                     kernel=hyper_parameters.kernel,
-                                    dropout=hyper_parameters.dropout)
+                                    dropout=hyper_parameters.dropout,
+                                    normalization=hyper_parameters.normalization)
 
         self.discriminator = ImageToVec(hyper_parameters.image_size,
                                         hyper_parameters.image_channels,
@@ -58,7 +60,8 @@ class GAN(ImageModelBase):
                                         initial_channels=hyper_parameters.initial_channels,
                                         dense_layers=hyper_parameters.discriminator_dense_layers,
                                         kernel=hyper_parameters.kernel,
-                                        dropout=hyper_parameters.dropout)
+                                        dropout=hyper_parameters.dropout,
+                                        normalization=hyper_parameters.normalization)
 
         self.optimizer_g = Adam(self.generator.parameters(), lr=hyper_parameters.learning_rate)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=hyper_parameters.learning_rate)
@@ -67,14 +70,14 @@ class GAN(ImageModelBase):
         summary(self, depth=1)
 
     def sample_images(self, count):
-        z = Variable(FloatTensor(np.random.normal(0, 1, (count, self.latent_dim))))
+        z = Variable(FloatTensor(np.random.normal(0, 1, (count, self.hyper_parameters.latent_dim))))
         return self.generator(z)
 
     def train_batch(self, batch):
         # Initialize
         batch_size = len(batch)
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
-        z_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.latent_dim))))
+        z_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.hyper_parameters.latent_dim))))
         label_noise = Variable(FloatTensor(np.random.normal(0, 0.2, (batch_size, 1))))
         real_input_noise = torch.randn_like(batch)
         fake_input_noise = torch.randn_like(batch)

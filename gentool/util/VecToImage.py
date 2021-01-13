@@ -7,7 +7,7 @@ from torch import nn
 class VecToImage(nn.Module):
     def __init__(self, image_size, image_channels, layers_per_size, initial_channels=4,
                  activation=nn.LeakyReLU(inplace=True), dense_layers=(64), output_activation=nn.Tanh(),
-                 dropout=0.4, kernel=3):
+                 dropout=0.4, kernel=3, normalization='group'):
         super().__init__()
 
         self.image_size = image_size
@@ -39,7 +39,7 @@ class VecToImage(nn.Module):
                     blocks.append(nn.ConvTranspose2d(c_old, channels, 4, 2, 1))
 
                 blocks.append(ResidualBlock(channels, channels, min_size, skip_connections=False,
-                                            activation=activation, normalization='group', dropout=dropout,
+                                            activation=activation, normalization=normalization, dropout=dropout,
                                             kernel=kernel))
 
         blocks.append(nn.Conv2d(channels, image_channels, kernel, 1, int(kernel/2)))

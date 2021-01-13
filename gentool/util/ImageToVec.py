@@ -5,7 +5,7 @@ from torch import nn
 class ImageToVec(nn.Module):
     def __init__(self, image_size, image_channels, layers_per_size, initial_channels=4,
                  activation=nn.LeakyReLU(inplace=True), dense_layers=(64), output_activation=nn.Tanh(),
-                 dropout=0.4, kernel=3):
+                 dropout=0.4, kernel=3, normalization='group'):
         super().__init__()
 
         self.image_size = image_size
@@ -16,7 +16,7 @@ class ImageToVec(nn.Module):
 
         blocks = []
         blocks.append(ResidualBlock(image_channels, initial_channels, image_size,
-                                    activation=activation, normalization='group'))
+                                    activation=activation, normalization=normalization))
 
         channels = initial_channels
         while image_size > 1:
@@ -24,7 +24,7 @@ class ImageToVec(nn.Module):
 
             for i in range(layers_per_size):
                 blocks.append(ResidualBlock(channels, channels, image_size, kernel=kernel,
-                                            activation=activation, normalization='group', dropout=dropout))
+                                            activation=activation, normalization=normalization, dropout=dropout))
 
                 if i == layers_per_size - 1:
                     c_old, channels = channels, int(channels * 2)
