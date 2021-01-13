@@ -1,5 +1,6 @@
 from math import floor, log2
 from torch import nn
+from torch.nn.functional import dropout2d
 
 
 def best_group_count(channels):
@@ -43,7 +44,7 @@ def get_normalization(norm_name, channels, image_size, learnable_params):
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, image_size, activation=nn.LeakyReLU(), bias=True, kernel=3,
-                 normalization='batch', learnable_params=True, skip_connections=True):
+                 normalization='batch', learnable_params=True, skip_connections=True, dropout=0.2):
         super().__init__()
 
         self.in_channels = in_channels
@@ -53,17 +54,21 @@ class ResidualBlock(nn.Module):
         hidden_channels = min(in_channels, out_channels)
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_channels, hidden_channels, kernel, 1, 1, bias=bias),
+            nn.Conv2d(in_channels, hidden_channels, kernel, 1, int(kernel/2), bias=bias),
             get_normalization(normalization, hidden_channels, image_size, learnable_params),
             activation,
+            nn.Dropout2d(dropout),
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv2d(hidden_channels, out_channels, kernel, 1, 1, bias=bias),
+            nn.Conv2d(hidden_channels, out_channels, kernel, 1, int(kernel/2), bias=bias),
             get_normalization(normalization, out_channels, image_size, learnable_params),
         )
 
-        self.activation = activation
+        self.activation = nn.Sequential(
+            activation,
+            nn.Dropout2d(dropout),
+        )
 
     def forward(self, x):
         res = x

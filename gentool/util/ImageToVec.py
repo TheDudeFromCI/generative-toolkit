@@ -4,13 +4,15 @@ from torch import nn
 
 class ImageToVec(nn.Module):
     def __init__(self, image_size, image_channels, layers_per_size, initial_channels=4,
-                 activation=nn.LeakyReLU(inplace=True), dense_layers=(64), output_activation=nn.Tanh()):
+                 activation=nn.LeakyReLU(inplace=True), dense_layers=(64), output_activation=nn.Tanh(),
+                 dropout=0.4, kernel=3):
         super().__init__()
 
         self.image_size = image_size
         self.layers_per_size = layers_per_size
         self.initial_channels = initial_channels
         self.dense_layers = dense_layers
+        self.kernel = kernel
 
         blocks = []
         blocks.append(ResidualBlock(image_channels, initial_channels, image_size,
@@ -21,8 +23,8 @@ class ImageToVec(nn.Module):
             image_size >>= 1
 
             for i in range(layers_per_size):
-                blocks.append(ResidualBlock(channels, channels, image_size,
-                                            activation=activation, normalization='group'))
+                blocks.append(ResidualBlock(channels, channels, image_size, kernel=kernel,
+                                            activation=activation, normalization='group', dropout=dropout))
 
                 if i == layers_per_size - 1:
                     c_old, channels = channels, int(channels * 2)
@@ -38,6 +40,7 @@ class ImageToVec(nn.Module):
                 blocks.append(output_activation)
             else:
                 blocks.append(activation)
+                blocks.append(nn.Dropout(dropout))
 
         self.conv = nn.Sequential(*blocks)
 
