@@ -57,7 +57,6 @@ class GAN(ImageModelBase):
                                         hyper_parameters.discriminator_layers_per_size,
                                         initial_channels=hyper_parameters.initial_channels,
                                         dense_layers=hyper_parameters.discriminator_dense_layers,
-                                        output_activation=nn.Sigmoid(),
                                         kernel=hyper_parameters.kernel,
                                         dropout=hyper_parameters.dropout)
 
@@ -74,9 +73,9 @@ class GAN(ImageModelBase):
     def train_batch(self, batch):
         # Initialize
         batch_size = len(batch)
-        zeros = Variable(FloatTensor(np.zeros((batch_size, 1))))
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
         z_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.latent_dim))))
+        label_noise = Variable(FloatTensor(np.random.normal(0, 0.2, (batch_size, 1))))
         real_input_noise = torch.randn_like(batch)
         fake_input_noise = torch.randn_like(batch)
 
@@ -85,14 +84,14 @@ class GAN(ImageModelBase):
         g_fake_data = self.generator(z_noise) + fake_input_noise
         dg_fake_decision = self.discriminator(g_fake_data)
 
-        g_loss = F.mse_loss(dg_fake_decision, ones)
+        g_loss = F.mse_loss(dg_fake_decision, -ones + label_noise)
         g_loss.backward()
         self.optimizer_g.step()
 
         # Update discriminator
         g_fake_data = Variable(g_fake_data.data)
         total_input = torch.cat([batch + real_input_noise, g_fake_data])
-        total_target = torch.cat([ones, zeros])
+        total_target = torch.cat([ones + label_noise, -ones + label_noise])
 
         self.optimizer_d.zero_grad()
         d_real_decision = self.discriminator(total_input)
