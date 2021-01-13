@@ -31,6 +31,9 @@ class GanHyperParameters():
         self.image_folders = []
         self.data_augmentation = T.ToTensor()
         self.data_workers = 4
+        self.generator_dense_layers = (32, 32)
+        self.discriminator_dense_layers = (32, 16, 1)
+        self.dropout = 0.4
 
 
 class GAN(ImageModelBase):
@@ -45,17 +48,18 @@ class GAN(ImageModelBase):
                                     hyper_parameters.image_channels,
                                     hyper_parameters.generator_layers_per_size,
                                     initial_channels=hyper_parameters.initial_channels,
-                                    dense_layers=(hyper_parameters.latent_dim, hyper_parameters.latent_dim),
-                                    kernel=hyper_parameters.kernel)
+                                    dense_layers=hyper_parameters.generator_dense_layers,
+                                    kernel=hyper_parameters.kernel,
+                                    dropout=hyper_parameters.dropout)
 
         self.discriminator = ImageToVec(hyper_parameters.image_size,
                                         hyper_parameters.image_channels,
                                         hyper_parameters.discriminator_layers_per_size,
                                         initial_channels=hyper_parameters.initial_channels,
-                                        dense_layers=(hyper_parameters.latent_dim, floor(
-                                            hyper_parameters.latent_dim / 2), 1),
+                                        dense_layers=hyper_parameters.discriminator_dense_layers,
                                         output_activation=nn.Sigmoid(),
-                                        kernel=hyper_parameters.kernel)
+                                        kernel=hyper_parameters.kernel,
+                                        dropout=hyper_parameters.dropout)
 
         self.optimizer_g = Adam(self.generator.parameters(), lr=hyper_parameters.learning_rate)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=hyper_parameters.learning_rate)
