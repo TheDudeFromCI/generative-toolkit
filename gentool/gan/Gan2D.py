@@ -104,8 +104,6 @@ class Gan2D(ImageModelBase):
 
     def train_generator(self, batch):
         self.optimizer_g.zero_grad()
-        self.optimizer_d.zero_grad()
-
         fake_input_noise = torch.randn_like(batch)
         g_fake_data = self.generator(self.z_noise()) + fake_input_noise * 0.2
         dg_fake_decision = self.discriminator(g_fake_data)
@@ -114,6 +112,12 @@ class Gan2D(ImageModelBase):
         g_loss = F.mse_loss(dg_fake_decision, self.real_label())
         g_loss.backward()
         self.optimizer_g.step()
+
+        self.optimizer_d.zero_grad()
+        fake_input_noise = torch.randn_like(batch)
+        g_fake_data = self.generator(self.z_noise()) + fake_input_noise * 0.2
+        dg_fake_decision = self.discriminator(g_fake_data)
+        dg_fake_decision = self.dense(dg_fake_decision)
 
         d_loss = F.mse_loss(dg_fake_decision, self.fake_label())
         d_loss.backward()
