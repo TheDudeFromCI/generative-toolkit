@@ -83,9 +83,12 @@ class ImageModelBase(ModelBase):
     def save_snapshot(self, update_number):
         os.makedirs('images', exist_ok=True)
 
-        images = self.sample_images(self.save_snapshot_count)
-        rows = floor(sqrt(self.save_snapshot_count))
+        self.train(False)
+        with torch.no_grad():
+            images = self.sample_images(self.save_snapshot_count)
+        self.train(True)
 
+        rows = floor(sqrt(self.save_snapshot_count))
         filename = 'images/up-{}.{}.png'.format(update_number, time())
         save_image(images, filename, nrow=rows)
 
