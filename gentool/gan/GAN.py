@@ -76,9 +76,8 @@ class GAN(ImageModelBase):
     def train_batch(self, batch):
         # Initialize
         batch_size = len(batch)
-        ones = Variable(FloatTensor(np.ones((batch_size, 1))))
+        ones = Variable(FloatTensor(np.ones((batch_size, 1)))) * 0.8
         z_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, self.hyper_parameters.latent_dim))))
-        label_noise = Variable(FloatTensor(np.random.normal(0, 0.2, (batch_size, 1))))
         real_input_noise = torch.randn_like(batch)
         fake_input_noise = torch.randn_like(batch)
 
@@ -87,19 +86,28 @@ class GAN(ImageModelBase):
         g_fake_data = self.generator(z_noise) + fake_input_noise
         dg_fake_decision = self.discriminator(g_fake_data)
 
+        label_noise = Variable(FloatTensor(np.random.normal(0, 0.2, (batch_size, 1))))
         g_loss = F.mse_loss(dg_fake_decision, -ones + label_noise)
         g_loss.backward()
         self.optimizer_g.step()
 
-        # Update discriminator
+        # Update discriminator (Fake Data)
         g_fake_data = Variable(g_fake_data.data)
-        total_input = torch.cat([batch + real_input_noise, g_fake_data])
-        total_target = torch.cat([ones + label_noise, -ones + label_noise])
 
         self.optimizer_d.zero_grad()
-        d_real_decision = self.discriminator(total_input)
+        d_real_decision = self.discriminator(g_fake_data)
 
-        d_loss = F.mse_loss(d_real_decision, total_target)
+        label_noise = Variable(FloatTensor(np.random.normal(0, 0.2, (batch_size, 1))))
+        d_loss = F.mse_loss(d_real_decision, -ones + label_noise)
+        d_loss.backward()
+        self.optimizer_d.step()
+
+        # Update discriminator (Real Data)
+        self.optimizer_d.zero_grad()
+        d_real_decision = self.discriminator(batch + real_input_noise)
+
+        label_noise = Variable(FloatTensor(np.random.normal(0, 0.2, (batch_size, 1))))
+        d_loss = F.mse_loss(d_real_decision, ones + label_noise)
         d_loss.backward()
         self.optimizer_d.step()
 
