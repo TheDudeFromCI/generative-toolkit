@@ -1,7 +1,7 @@
 from gentool.ModelBase import ImageModelBase
 
 import numpy as np
-from math import floor
+from math import log2
 
 import torch
 from torch import nn
@@ -17,7 +17,7 @@ from gentool.util.VecToImage import VecToImage
 from gentool.database.ImageDataLoader import image_dataloader
 
 
-class GanHyperParameters():
+class Gan2DHyperParameters():
     def __init__(self):
         self.image_size = 32
         self.image_channels = 3
@@ -31,43 +31,47 @@ class GanHyperParameters():
         self.image_folders = []
         self.data_augmentation = T.ToTensor()
         self.data_workers = 4
-        self.generator_dense_layers = (32, 32)
-        self.discriminator_dense_layers = (32, 16, 1)
         self.dropout = 0.4
         self.normalization = 'group'
 
 
-class GAN(ImageModelBase):
-    def __init__(self, hyper_parameters: GanHyperParameters):
+class Gan2D(ImageModelBase):
+    def __init__(self, hyper_parameters: Gan2DHyperParameters):
         dataloader = image_dataloader(hyper_parameters.image_folders, hyper_parameters.batch_size,
                                       hyper_parameters.data_augmentation, workers=hyper_parameters.data_workers)
         super().__init__(dataloader)
 
         self.hyper_parameters = hyper_parameters
+        hyper_parameters.latent_dim = (hyper_parameters.initial_channels << int(
+            log2(hyper_parameters.image_size) - 1)) * 16
 
         self.generator = VecToImage(hyper_parameters.image_size,
                                     hyper_parameters.image_channels,
                                     hyper_parameters.generator_layers_per_size,
                                     initial_channels=hyper_parameters.initial_channels,
-                                    dense_layers=hyper_parameters.generator_dense_layers,
                                     kernel=hyper_parameters.kernel,
                                     dropout=hyper_parameters.dropout,
-                                    normalization=hyper_parameters.normalization)
+                                    normalization=hyper_parameters.normalization,
+                                    min_size=4)
 
         self.discriminator = ImageToVec(hyper_parameters.image_size,
                                         hyper_parameters.image_channels,
                                         hyper_parameters.discriminator_layers_per_size,
                                         initial_channels=hyper_parameters.initial_channels,
-                                        dense_layers=hyper_parameters.discriminator_dense_layers,
                                         kernel=hyper_parameters.kernel,
                                         dropout=hyper_parameters.dropout,
-                                        normalization=hyper_parameters.normalization)
+                                        normalization=hyper_parameters.normalization,
+                                        min_size=1)
+
+        self.discriminator.conv.insert(len(self.discriminator.conv) - 2, nn.LeakyReLU(inplace=True))
+        self.discriminator.conv.insert(len(self.discriminator.conv) - 2, nn.Conv2d(
+            hyper_parameters.initial_channels << int(log2(hyper_parameters.image_size)), 1, 1, 1))
 
         self.optimizer_g = Adam(self.generator.parameters(), lr=hyper_parameters.learning_rate)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=hyper_parameters.learning_rate)
 
         self.cuda()
-        summary(self, depth=1)
+        summary(self, (1, hyper_parameters.latent_dim), depth=3)
 
     def sample_images(self, count):
         z = Variable(FloatTensor(np.random.normal(0, 1, (count, self.hyper_parameters.latent_dim))))
@@ -138,3 +142,8 @@ class GAN(ImageModelBase):
 
     def loss_names_and_groups(_):
         return ['g_loss', 'd_loss'], {'GAN': ['g_loss', 'd_loss']}
+
+    def forward(self, x):
+        x = self.generator(x)
+        x = self.discriminator(x)
+        return x
