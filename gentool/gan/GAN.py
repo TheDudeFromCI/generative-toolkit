@@ -1,4 +1,3 @@
-import copy
 from gentool.ModelBase import ImageModelBase
 
 import numpy as np
@@ -10,37 +9,56 @@ from torch.cuda import FloatTensor
 from torch.autograd import Variable
 from torch.optim.adam import Adam
 import torch.nn.functional as F
+import torchvision.transforms as T
 from torchinfo import summary
 
 from gentool.util.ImageToVec import ImageToVec
 from gentool.util.VecToImage import VecToImage
+from gentool.database.ImageDataLoader import image_dataloader
+
+
+class GanHyperParameters():
+    def __init__(self):
+        self.image_size = 32
+        self.image_channels = 3
+        self.generator_layers_per_size = 3
+        self.discriminator_layers_per_size = 3
+        self.latent_dim = 32
+        self.initial_channels = 4
+        self.learning_rate = 1e-4
+        self.kernel = 5
+        self.batch_size = 25
+        self.image_folders = []
+        self.data_augmentation = T.ToTensor()
+        self.data_workers = 4
 
 
 class GAN(ImageModelBase):
-    def __init__(self, dataloader, image_size, image_channels, layers_per_size, latent_dim, initial_channels=4, learning_rate=1e-4):
+    def __init__(self, hyper_parameters: GanHyperParameters):
+        dataloader = image_dataloader(hyper_parameters.image_folders, hyper_parameters.batch_size,
+                                      hyper_parameters.data_augmentation, workers=hyper_parameters.data_workers)
         super().__init__(dataloader)
 
-        self.image_size = image_size
-        self.image_channels = image_channels
-        self.layers_per_size = layers_per_size
-        self.latent_dim = latent_dim
-        self.initial_channels = initial_channels
+        self.hyper_parameters = hyper_parameters
 
-        self.generator = VecToImage(image_size,
-                                    image_channels,
-                                    layers_per_size,
-                                    initial_channels=initial_channels,
-                                    dense_layers=(latent_dim, latent_dim))
+        self.generator = VecToImage(hyper_parameters.image_size,
+                                    hyper_parameters.image_channels,
+                                    hyper_parameters.generator_layers_per_size,
+                                    initial_channels=hyper_parameters.initial_channels,
+                                    dense_layers=(hyper_parameters.latent_dim, hyper_parameters.latent_dim),
+                                    kernel=hyper_parameters.kernel)
 
-        self.discriminator = ImageToVec(image_size,
-                                        image_channels,
-                                        layers_per_size,
-                                        initial_channels=initial_channels,
-                                        dense_layers=(latent_dim, floor(latent_dim / 2), 1),
-                                        output_activation=nn.Sigmoid())
+        self.discriminator = ImageToVec(hyper_parameters.image_size,
+                                        hyper_parameters.image_channels,
+                                        hyper_parameters.discriminator_layers_per_size,
+                                        initial_channels=hyper_parameters.initial_channels,
+                                        dense_layers=(hyper_parameters.latent_dim, floor(
+                                            hyper_parameters.latent_dim / 2), 1),
+                                        output_activation=nn.Sigmoid(),
+                                        kernel=hyper_parameters.kernel)
 
-        self.optimizer_g = Adam(self.generator.parameters(), lr=learning_rate)
-        self.optimizer_d = Adam(self.discriminator.parameters(), lr=learning_rate)
+        self.optimizer_g = Adam(self.generator.parameters(), lr=hyper_parameters.learning_rate)
+        self.optimizer_d = Adam(self.discriminator.parameters(), lr=hyper_parameters.learning_rate)
 
         self.cuda()
         summary(self, depth=1)
