@@ -56,18 +56,18 @@ class ResidualBlock(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, hidden_channels, kernel, 1, int(kernel/2), bias=bias),
             get_normalization(normalization, hidden_channels, image_size, learnable_params),
-            activation,
             nn.Dropout2d(dropout),
+            activation,
         )
 
         self.conv2 = nn.Sequential(
             nn.Conv2d(hidden_channels, out_channels, kernel, 1, int(kernel/2), bias=bias),
-            get_normalization(normalization, out_channels, image_size, learnable_params),
         )
 
         self.activation = nn.Sequential(
-            activation,
+            get_normalization(normalization, out_channels, image_size, learnable_params),
             nn.Dropout2d(dropout),
+            activation,
         )
 
     def forward(self, x):
