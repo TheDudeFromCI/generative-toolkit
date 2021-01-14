@@ -1,3 +1,4 @@
+from gentool.util.ImageGenerator import ImageGenerator
 import numpy as np
 from math import log2
 
@@ -20,9 +21,9 @@ class Gan2DHyperParameters():
     def __init__(self):
         self.image_size = 32
         self.image_channels = 3
-        self.generator_layers_per_size = 3
         self.discriminator_layers_per_size = 3
-        self.initial_channels = 4
+        self.gen_initial_channels = 32
+        self.dis_initial_channels = 4
         self.learning_rate = 1e-4
         self.kernel = 5
         self.batch_size = 25
@@ -38,7 +39,11 @@ class Gan2DHyperParameters():
 
     @property
     def latent_dim(self):
-        return (self.initial_channels << int(log2(self.image_size) - 2)) * 4 * 4
+        return (self.gen_initial_channels << int(log2(self.image_size) - 2)) * 4 * 4
+
+    @property
+    def discriminator_out(self):
+        return (self.dis_initial_channels << int(log2(self.image_size)))
 
 
 class Gan2D(ImageModelBase):
@@ -59,28 +64,27 @@ class Gan2D(ImageModelBase):
         summary(self, (1, hyper_parameters.latent_dim), depth=3)
 
     def _build_generator(self):
-        return VecToImage(self.hyper_parameters.image_size,
-                          self.hyper_parameters.image_channels,
-                          self.hyper_parameters.generator_layers_per_size,
-                          initial_channels=self.hyper_parameters.initial_channels,
-                          kernel=self.hyper_parameters.kernel,
-                          dropout=self.hyper_parameters.dropout,
-                          normalization=self.hyper_parameters.normalization,
-                          min_size=4,
-                          activation=nn.ReLU(inplace=True),
-                          output_activation=nn.Tanh(),
-                          normalize_last=False,
-                          bias=self.hyper_parameters.bias_neurons)
+        return ImageGenerator(self.hyper_parameters.image_size,
+                              self.hyper_parameters.image_channels,
+                              initial_channels=self.hyper_parameters.gen_initial_channels,
+                              kernel=self.hyper_parameters.kernel,
+                              dropout=self.hyper_parameters.dropout,
+                              normalization=self.hyper_parameters.normalization,
+                              min_size=4,
+                              activation=nn.ReLU(inplace=True),
+                              output_activation=nn.Tanh(),
+                              normalize_last=False,
+                              bias=self.hyper_parameters.bias_neurons)
 
     def _build_discriminator(self):
         return ImageToVec(self.hyper_parameters.image_size,
                           self.hyper_parameters.image_channels,
                           self.hyper_parameters.discriminator_layers_per_size,
-                          initial_channels=self.hyper_parameters.initial_channels,
+                          initial_channels=self.hyper_parameters.dis_initial_channels,
                           kernel=self.hyper_parameters.kernel,
                           dropout=self.hyper_parameters.dropout,
                           normalization=self.hyper_parameters.normalization,
-                          min_size=4,
+                          min_size=1,
                           activation=nn.LeakyReLU(self.hyper_parameters.leaky_relu_slope, inplace=True),
                           output_activation=nn.LeakyReLU(self.hyper_parameters.leaky_relu_slope, inplace=True),
                           normalize_last=True,
@@ -88,7 +92,7 @@ class Gan2D(ImageModelBase):
 
     def _build_dense(self):
         return nn.Sequential(
-            nn.Linear(self.hyper_parameters.latent_dim, 1, bias=self.hyper_parameters.bias_neurons),
+            nn.Linear(self.hyper_parameters.discriminator_out, 1, bias=self.hyper_parameters.bias_neurons),
             nn.LeakyReLU(self.hyper_parameters.leaky_relu_slope, inplace=True)
         )
 
