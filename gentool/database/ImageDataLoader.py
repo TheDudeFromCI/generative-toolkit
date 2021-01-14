@@ -9,8 +9,8 @@ from gentool.database.image_dataset import ImageDataset
 
 
 def image_dataloader(folders, batch_size, transform, format='RGB', workers=4):
-    dataloader = DataLoader(ImageDataset(folders, transform, format), batch_size=batch_size,
-                            shuffle=True, num_workers=workers, drop_last=True, persistent_workers=True)
+    dataloader = DataLoader(ImageDataset(folders, transform, batch_size, format), batch_size=batch_size,
+                            num_workers=workers, persistent_workers=True)
 
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):

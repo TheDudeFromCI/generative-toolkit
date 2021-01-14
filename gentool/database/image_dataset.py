@@ -7,9 +7,10 @@ from PIL import Image, UnidentifiedImageError
 
 
 class ImageDataset(Dataset):
-    def __init__(self, folders, transform, format='RGB'):
+    def __init__(self, folders, transform, batch_size, format='RGB'):
         self.transform = transform
         self.format = format
+        self.batch_size = batch_size
         self.files = []
 
         for folder in folders:
@@ -17,20 +18,15 @@ class ImageDataset(Dataset):
                 self.files.append(join_path(folder, file))
 
     def __len__(self):
-        return len(self.files)
+        return self.batch_size
 
-    def __getitem__(self, index):
-        # Make sure that we're not trying to get one we've already removed.
-        if index >= len(self.files):
-            return self.__getitem__(randint(0, len(self.files) - 1))
-
-        img_name = self.files[index]
-
-        try:
-            image = Image.open(img_name).convert(self.format)
-            image = self.transform(image)
-            return image
-        except UnidentifiedImageError:
-            # File cannot be loaded. Remove from file list
-            self.files.remove(img_name)
-            return self.__getitem__(randint(0, len(self.files) - 1))
+    def __getitem__(self, _):
+        while len(self.files) > 0:
+            img_name = self.files[randint(0, len(self.files) - 1)]
+            try:
+                image = Image.open(img_name).convert(self.format)
+                image = self.transform(image)
+                return image
+            except UnidentifiedImageError:
+                # File cannot be loaded. Remove from file list
+                self.files.remove(img_name)
