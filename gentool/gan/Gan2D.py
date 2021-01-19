@@ -61,15 +61,19 @@ class Gan2D(ImageModelBase):
 
     def real_label(self):
         batch_size = self.hyper_parameters.batch_size
+        s = self.hyper_parameters.label_smoothing
+
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
-        label_noise = Variable(FloatTensor(np.random.normal(0, 0.05, (batch_size, 1))))
-        return ones * 0.9 + label_noise
+        label_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, 1))))
+        return ones * (1-s) + label_noise * (s/2)
 
     def fake_label(self):
         batch_size = self.hyper_parameters.batch_size
+        s = self.hyper_parameters.label_smoothing
+
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
-        label_noise = Variable(FloatTensor(np.random.normal(0, 0.05, (batch_size, 1))))
-        return ones * 0.1 + label_noise
+        label_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, 1))))
+        return ones * s + label_noise * (s/2)
 
     def train_generator(self, batch):
         self.optimizer_g.zero_grad()

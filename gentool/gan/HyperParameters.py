@@ -23,6 +23,7 @@ class Gan2DHyperParameters():
         self.bias_neurons = False
         self.leaky_relu_slope = 0.2
         self.input_noise = 0.1
+        self.label_smoothing = 0.1
 
     @property
     def latent_dim(self):
