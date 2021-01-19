@@ -1,7 +1,7 @@
 from torch import nn
 
 from gentool.util.ImageToVec import ImageToVec
-from gentool.gan.Gan2D import Gan2DHyperParameters
+from gentool.gan.HyperParameters import Gan2DHyperParameters
 
 
 class Discriminator(nn.Module):

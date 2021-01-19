@@ -1,7 +1,7 @@
 from torch import nn
 
-from gentool.gan.Gan2D import Gan2DHyperParameters
 from gentool.util.ImageGenerator import ImageGenerator
+from gentool.gan.HyperParameters import Gan2DHyperParameters
 
 
 class Generator(nn.Module):
