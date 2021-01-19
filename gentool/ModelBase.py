@@ -5,7 +5,6 @@ from livelossplot.plot_losses import PlotLosses
 
 from tqdm import tqdm
 from time import time
-from math import floor, sqrt
 
 import torch
 from torch import nn
@@ -18,10 +17,7 @@ class ModelBase(nn.Module):
         self.dataloader = dataloader
 
         self.save_model_rate = 1000
-
-        loss_names, loss_groups = self.loss_names_and_groups()
-        self.loss_names = loss_names
-        self.liveloss = PlotLosses(outputs=['MatplotlibPlot'], groups=loss_groups)
+        self.loss_names = self.loss_names()
 
     def save_model(self, update_number):
         os.makedirs('models', exist_ok=True)
@@ -34,19 +30,31 @@ class ModelBase(nn.Module):
 
     def fit(self, n_updates):
         with tqdm(range(n_updates)) as prog_bar:
+            losses = []
             for update_number in range(1, n_updates + 1):
                 batch = next(self.dataloader)
 
                 losses = self.train_batch(batch)
+
+                loss_text = self.format_losses(losses)
+                prog_bar.write('Batch = {}, Losses = [{}]'.format(update_number, loss_text))
+
                 self.batch_callback(update_number, losses)
 
                 prog_bar.update(1)
 
-    def batch_callback(self, update_number, losses):
-        logs = self.format_logs(losses)
-        self.liveloss.update(logs, update_number)
-        self.liveloss.send()
+    def format_losses(self, losses):
+        text = ''
 
+        for i in range(len(losses)):
+            if i > 0:
+                text += ', '
+
+            text += '{}: {:.4f}'.format(self.loss_names[i], losses[i])
+
+        return text
+
+    def batch_callback(self, update_number, losses):
         if update_number % self.save_model_rate == 0:
             self.save_model(update_number)
 
@@ -59,7 +67,7 @@ class ModelBase(nn.Module):
         return logs
 
     @abstractmethod
-    def loss_names_and_groups(self):
+    def loss_names(self):
         raise NotImplementedError
 
     @abstractmethod
@@ -85,10 +93,9 @@ class ImageModelBase(ModelBase):
 
         self.train(False)
         with torch.no_grad():
-            images = self.sample_images(self.save_snapshot_count)
+            images, rows = self.sample_images(self.save_snapshot_count)
         self.train(True)
 
-        rows = floor(sqrt(self.save_snapshot_count))
         filename = 'images/up-{}.{}.png'.format(update_number, time())
         save_image(images, filename, nrow=rows)
 
