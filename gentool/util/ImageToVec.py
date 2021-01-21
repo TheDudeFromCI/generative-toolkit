@@ -17,13 +17,20 @@ class ImageToVec(nn.Module):
 
         channels = initial_channels
         while image_size > min_size:
-            image_size >>= 1
-
             for i in range(layers_per_size):
-                blocks.append(ResidualBlock(channels, channels, image_size, kernel=kernel,
-                                            activation=activation, normalization=normalization, dropout=dropout))
+                blocks.append(nn.Conv2d(channels, channels, 3, 1, 1, bias=bias))
+                blocks.append(get_normalization(normalization, channels, image_size, True))
+                blocks.append(nn.Dropout2d(dropout))
+                blocks.append(activation)
+
+                blocks.append(nn.Conv2d(channels, channels, 3, 1, 1, bias=bias))
+                blocks.append(get_normalization(normalization, channels, image_size, True))
+                blocks.append(nn.Dropout2d(dropout))
+                blocks.append(activation)
 
                 if i == layers_per_size - 1:
+                    image_size >>= 1
+
                     c_old, channels = channels, int(channels * 2)
                     blocks.append(nn.Conv2d(c_old, channels, 3, 2, 1, bias=bias))
                     blocks.append(get_normalization(normalization, channels, image_size, True))
@@ -31,8 +38,15 @@ class ImageToVec(nn.Module):
                     blocks.append(activation)
 
         for i in range(layers_per_size - 1):
-            blocks.append(ResidualBlock(channels, channels, image_size, kernel=kernel, bias=bias,
-                                        activation=activation, normalization=normalization, dropout=dropout))
+            blocks.append(nn.Conv2d(channels, channels, 3, 1, 1, bias=bias))
+            blocks.append(get_normalization(normalization, channels, image_size, True))
+            blocks.append(nn.Dropout2d(dropout))
+            blocks.append(activation)
+
+            blocks.append(nn.Conv2d(channels, channels, 3, 1, 1, bias=bias))
+            blocks.append(get_normalization(normalization, channels, image_size, True))
+            blocks.append(nn.Dropout2d(dropout))
+            blocks.append(activation)
 
         blocks.append(nn.Conv2d(channels, channels, kernel, 1, int(kernel/2), bias=bias))
 
