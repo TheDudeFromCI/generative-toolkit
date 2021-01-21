@@ -1,6 +1,5 @@
 from math import floor, log2
 from torch import nn
-from torch.nn.functional import dropout2d
 
 
 def best_group_count(channels):

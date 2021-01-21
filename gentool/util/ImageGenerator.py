@@ -26,6 +26,16 @@ class ImageGenerator(nn.Module):
             blocks.append(nn.Dropout2d(dropout))
             blocks.append(activation)
 
+            blocks.append(nn.Conv2d(channels, channels, kernel, 1, int(kernel/2), bias=bias))
+            blocks.append(get_normalization(normalization, channels, min_size, True))
+            blocks.append(nn.Dropout2d(dropout))
+            blocks.append(activation)
+
+            blocks.append(nn.Conv2d(channels, channels, kernel, 1, int(kernel/2), bias=bias))
+            blocks.append(get_normalization(normalization, channels, min_size, True))
+            blocks.append(nn.Dropout2d(dropout))
+            blocks.append(activation)
+
         blocks.append(nn.Conv2d(channels, image_channels, kernel, 1, int(kernel/2), bias=bias))
 
         if normalize_last:
