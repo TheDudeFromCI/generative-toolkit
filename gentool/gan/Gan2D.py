@@ -3,7 +3,6 @@ from math import ceil, sqrt
 
 import torch
 from torchinfo import summary
-from torch.optim.adam import Adam
 from torch.cuda import FloatTensor
 from torch.autograd import Variable
 from torch.nn import functional as F
@@ -24,10 +23,6 @@ class Gan2D(ImageModelBase):
         self.hyper_parameters = hyper_parameters
         self.generator = self._build_generator()
         self.discriminator = self._build_discriminator()
-
-        betas = (hyper_parameters.adam_beta1, hyper_parameters.adam_beta2)
-        self.optimizer_g = Adam(self.generator.parameters(), lr=hyper_parameters.learning_rate, betas=betas)
-        self.optimizer_d = Adam(self.discriminator.parameters(), lr=hyper_parameters.learning_rate, betas=betas)
 
         self.cuda()
         summary(self, (1, hyper_parameters.latent_dim), depth=4)
@@ -64,32 +59,33 @@ class Gan2D(ImageModelBase):
         s = self.hyper_parameters.label_smoothing
 
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
-        label_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, 1))))
-        return ones * (1-s) + label_noise * (s/2)
+        return ones * (1-s)
 
     def fake_label(self):
         batch_size = self.hyper_parameters.batch_size
         s = self.hyper_parameters.label_smoothing
 
         ones = Variable(FloatTensor(np.ones((batch_size, 1))))
-        label_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, 1))))
-        return ones * s + label_noise * (s/2)
+        return ones * s
 
-    def train_generator(self, batch):
-        self.optimizer_g.zero_grad()
+    def train_generator(self):
+        self.generator.optimizer.zero_grad()
 
-        fake_input_noise = torch.randn_like(batch) * self.hyper_parameters.input_noise
-        g_fake_data = self.generator(self.z_noise()) + fake_input_noise
+        batch_size = self.hyper_parameters.batch_size
+        c, s = self.hyper_parameters.image_channels, self.hyper_parameters.image_size
+
+        fake_input_noise = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, c, s, s))))
+        g_fake_data = self.generator(self.z_noise()) + fake_input_noise * self.hyper_parameters.input_noise
         dg_fake_decision = self.discriminator(g_fake_data)
 
         g_loss = F.binary_cross_entropy(dg_fake_decision, self.real_label())
         g_loss.backward()
-        self.optimizer_g.step()
+        self.generator.optimizer.step()
 
         return g_loss.item()
 
     def train_discriminator_fake(self, batch):
-        self.optimizer_d.zero_grad()
+        self.discriminator.optimizer.zero_grad()
 
         fake_input_noise = torch.randn_like(batch) * self.hyper_parameters.input_noise
         g_fake_data = self.generator(self.z_noise()) + fake_input_noise
@@ -97,33 +93,30 @@ class Gan2D(ImageModelBase):
 
         d_loss = F.binary_cross_entropy(dg_fake_decision, self.fake_label())
         d_loss.backward()
-        self.optimizer_d.step()
+        self.discriminator.optimizer.step()
 
         return d_loss.item()
 
     def train_discriminator_real(self, batch):
-        self.optimizer_d.zero_grad()
+        self.discriminator.optimizer.zero_grad()
 
         real_input_noise = torch.randn_like(batch) * self.hyper_parameters.input_noise
         d_real_decision = self.discriminator(batch + real_input_noise)
 
         d_loss = F.binary_cross_entropy(d_real_decision, self.real_label())
         d_loss.backward()
-        self.optimizer_d.step()
+        self.discriminator.optimizer.step()
 
         return d_loss.item()
 
-    def train_batch(self, batch):
+    def train_batch(self):
+        batch = next(self.dataloader)
+
         d_loss_real = self.train_discriminator_real(batch)
         d_loss_fake = self.train_discriminator_fake(batch)
+        g_loss = self.train_generator()
 
-        g_loss = self.train_generator(batch)
-        d_loss = (d_loss_real + d_loss_fake) / 2
-
-        return [g_loss, d_loss]
-
-    def loss_names(_):
-        return 'g_loss', 'd_loss'
+        return '[g_loss: {:.4f}, d_loss_real: {:.4f}, d_loss_fake: {:.4f}]'.format(g_loss, d_loss_real, d_loss_fake)
 
     def forward(self, x):
         x = self.generator(x)

@@ -10,7 +10,8 @@ class Gan2DHyperParameters():
         self.discriminator_layers_per_size = 3
         self.gen_initial_channels = 32
         self.dis_initial_channels = 4
-        self.learning_rate = 1e-4
+        self.gen_learning_rate = 1e-4
+        self.dis_learning_rate = 4e-4
         self.kernel = 5
         self.batch_size = 25
         self.image_folders = []
@@ -31,4 +32,4 @@ class Gan2DHyperParameters():
 
     @property
     def discriminator_out(self):
-        return (self.dis_initial_channels << int(log2(self.image_size)))
+        return (self.dis_initial_channels << int(log2(self.image_size) - 2)) * 4 * 4
