@@ -15,9 +15,7 @@ class ModelBase(nn.Module):
     def __init__(self, dataloader):
         super().__init__()
         self.dataloader = dataloader
-
         self.save_model_rate = 1000
-        self.loss_names = self.loss_names()
 
     def save_model(self, update_number):
         os.makedirs('models', exist_ok=True)
@@ -32,27 +30,11 @@ class ModelBase(nn.Module):
         with tqdm(range(n_updates)) as prog_bar:
             losses = []
             for update_number in range(1, n_updates + 1):
-                batch = next(self.dataloader)
+                losses = self.train_batch()
 
-                losses = self.train_batch(batch)
-
-                loss_text = self.format_losses(losses)
-                prog_bar.write('Batch = {}, Losses = [{}]'.format(update_number, loss_text))
-
+                prog_bar.write('Batch = {}, Losses = {}'.format(update_number, losses))
                 self.batch_callback(update_number, losses)
-
                 prog_bar.update(1)
-
-    def format_losses(self, losses):
-        text = ''
-
-        for i in range(len(losses)):
-            if i > 0:
-                text += ', '
-
-            text += '{}: {:.4f}'.format(self.loss_names[i], losses[i])
-
-        return text
 
     def batch_callback(self, update_number, losses):
         if update_number % self.save_model_rate == 0:
@@ -65,10 +47,6 @@ class ModelBase(nn.Module):
             logs[self.loss_names[i]] = losses[i]
 
         return logs
-
-    @abstractmethod
-    def loss_names(self):
-        raise NotImplementedError
 
     @abstractmethod
     def train_batch(self, batch):
