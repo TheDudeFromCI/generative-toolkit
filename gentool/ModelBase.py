@@ -1,4 +1,5 @@
 import os
+import sys
 
 from abc import abstractmethod
 from livelossplot.plot_losses import PlotLosses
@@ -27,7 +28,7 @@ class ModelBase(nn.Module):
         self.load_state_dict(state)
 
     def fit(self, n_updates):
-        with tqdm(range(n_updates)) as prog_bar:
+        with tqdm(range(n_updates), smoothing=1.0) as prog_bar:
             losses = []
             for update_number in range(1, n_updates + 1):
                 losses = self.train_batch()
