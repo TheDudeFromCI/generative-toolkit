@@ -1,11 +1,7 @@
 import os
-import sys
-
-from abc import abstractmethod
-from livelossplot.plot_losses import PlotLosses
-
 from tqdm import tqdm
 from time import time
+from abc import abstractmethod
 
 import torch
 from torch import nn
