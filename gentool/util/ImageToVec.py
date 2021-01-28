@@ -1,12 +1,14 @@
-from gentool.util.ResidualBlock import ResidualBlock, get_normalization
 from torch import nn
+from pywick.functions.mish import Mish
+
+from gentool.util.ResidualBlock import ResidualBlock, get_normalization
 
 
 class ImageToVec(nn.Module):
     def __init__(self, image_size, image_channels, layers_per_size, initial_channels=4,
-                 activation=nn.LeakyReLU(inplace=True), output_activation=nn.Tanh(),
+                 activation=Mish(), output_activation=nn.Tanh(),
                  dropout=0.4, kernel=3, normalization='group', min_size=4, normalize_last=False,
-                 bias=False):
+                 bias=True):
         super().__init__()
 
         blocks = []

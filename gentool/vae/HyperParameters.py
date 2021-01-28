@@ -1,7 +1,5 @@
 from math import log2
 
-from torchvision import transforms as T
-
 
 class Vae2DHyperParameters():
     def __init__(self):
@@ -13,15 +11,11 @@ class Vae2DHyperParameters():
         self.learning_rate = 2e-4
         self.kernel = 5
         self.batch_size = 25
-        self.image_folders = []
-        self.data_augmentation = T.ToTensor()
-        self.data_workers = 4
-        self.dropout = 0.2
-        self.normalization = 'none'
-        self.adam_beta1 = 0.5
+        self.image_folder = ''
+        self.dropout = 0
+        self.normalization = 'batch'
+        self.adam_beta1 = 0.9
         self.adam_beta2 = 0.999
-        self.bias_neurons = True
-        self.leaky_relu_slope = 0.01
         self.kld_weight = 1
 
     @property

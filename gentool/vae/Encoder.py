@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from pywick.functions.mish import Mish
 
 from gentool.util.ImageToVec import ImageToVec
 from gentool.vae.HyperParameters import Vae2DHyperParameters
@@ -17,10 +18,10 @@ class Encoder(nn.Module):
                                  dropout=hyper_parameters.dropout,
                                  normalization=hyper_parameters.normalization,
                                  min_size=4,
-                                 activation=nn.LeakyReLU(hyper_parameters.leaky_relu_slope, inplace=True),
-                                 output_activation=nn.Tanh(),
-                                 normalize_last=False,
-                                 bias=hyper_parameters.bias_neurons)
+                                 activation=Mish(),
+                                 output_activation=Mish(),
+                                 normalize_last=True,
+                                 bias=True)
 
         self.mu = nn.Linear(hyper_parameters.encoder_out, hyper_parameters.latent_dim)
         self.var = nn.Linear(hyper_parameters.encoder_out, hyper_parameters.latent_dim)
