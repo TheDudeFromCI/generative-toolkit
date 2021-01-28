@@ -23,10 +23,10 @@ class ModelBase(nn.Module):
         state = torch.load(filename)
         self.load_state_dict(state)
 
-    def fit(self, n_updates):
-        with tqdm(range(n_updates), smoothing=1.0) as prog_bar:
+    def fit(self, n_updates, offset=0):
+        with tqdm(range(offset, n_updates + offset), smoothing=0.0) as prog_bar:
             losses = []
-            for update_number in range(1, n_updates + 1):
+            for update_number in range(offset + 1, n_updates + offset + 1):
                 losses = self.train_batch()
 
                 prog_bar.write('Batch = {}, Losses = {}'.format(update_number, losses))
