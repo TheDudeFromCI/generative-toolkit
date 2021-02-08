@@ -9,9 +9,8 @@ from torchvision.utils import save_image
 
 
 class ModelBase(nn.Module):
-    def __init__(self, dataloader):
+    def __init__(self):
         super().__init__()
-        self.dataloader = dataloader
         self.save_model_rate = 1000
 
     def save_model(self, update_number):
@@ -46,34 +45,32 @@ class ModelBase(nn.Module):
         return logs
 
     @abstractmethod
-    def train_batch(self, batch):
+    def train_batch(self):
         raise NotImplementedError
 
 
 class ImageModelBase(ModelBase):
-    def __init__(self, dataloader):
-        super().__init__(dataloader)
-
+    def __init__(self):
+        super().__init__()
         self.save_snapshot_rate = 100
-        self.save_snapshot_count = 25
 
     def batch_callback(self, update_number, losses):
         super().batch_callback(update_number, losses)
 
         if update_number % self.save_snapshot_rate == 0:
-            self.save_snapshot(update_number)
+            self.save_snapshot(update_number=update_number)
 
-    def save_snapshot(self, update_number):
+    def save_snapshot(self, update_number=0):
         os.makedirs('images', exist_ok=True)
 
         self.train(False)
         with torch.no_grad():
-            images, rows = self.sample_images(self.save_snapshot_count)
+            images, rows = self.sample_images()
         self.train(True)
 
         filename = 'images/up-{}.{}.png'.format(update_number, time())
         save_image(images, filename, nrow=rows)
 
-    @ abstractmethod
-    def sample_images(self, count):
+    @abstractmethod
+    def sample_images(_):
         raise NotImplementedError

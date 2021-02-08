@@ -2,13 +2,13 @@ import numpy as np
 from math import log
 
 import torch
+from torch import nn
+from torch.optim import Adam
 from torchinfo import summary
 from torch.cuda import FloatTensor
 from torch.autograd.variable import Variable
 from pywick.optimizers.rangerlars import RangerLars
 
-from gentool.vae.Decoder import Decoder
-from gentool.vae.Encoder import Encoder
 from gentool.ModelBase import ImageModelBase
 from gentool.vae.HyperParameters import Vae2DHyperParameters
 
@@ -20,25 +20,32 @@ class Vae2D(ImageModelBase):
         super().__init__(load_dataset(hyper_parameters.image_folder, hyper_parameters.batch_size))
 
         self.hyper_parameters = hyper_parameters
-        self.encoder = Encoder(hyper_parameters)
-        self.decoder = Decoder(hyper_parameters)
+        self.encoder = hyper_parameters.encoder
+        self.decoder = hyper_parameters.decoder
+
+        self.mu = hyper_parameters.mu
+        self.var = hyper_parameters.var
 
         betas = (hyper_parameters.adam_beta1, hyper_parameters.adam_beta2)
         lr = hyper_parameters.learning_rate
-        self.optimizer = RangerLars(self.parameters(), lr=lr, betas=betas)
+        self.optimizer = Adam(self.parameters(), lr=lr, betas=betas)
 
         self.cuda()
 
         c, s = hyper_parameters.image_channels, hyper_parameters.image_size
         summary(self, (1, c, s, s), depth=4)
 
-        self.avg_loss = []
+    def reparameterize(_, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mu
 
     def forward(self, x):
-        z, _, _ = self.encoder(x)
-        return self.decoder(z)
+        x = self.encoder(x)
+        x = self.reparameterize(self.mu(x), self.var(x))
+        return self.decoder(x)
 
-    def sample_images(self, count):
+    def sample_images(self):
         batch = next(self.dataloader)
 
         generated = self.forward(batch)
@@ -53,11 +60,13 @@ class Vae2D(ImageModelBase):
         recon_loss_total = 0
         kld_loss_total = 0
 
-        samples = 1
-        for _ in range(samples):
+        for _ in range(self.hyper_parameters.gradient_updates):
             batch = next(self.dataloader)
 
-            z, mu, var = self.encoder(batch)
+            x = self.encoder(batch)
+            mu = self.mu(x)
+            var = self.var(x)
+            z = self.reparameterize(mu, var)
             generated = self.decoder(z)
 
             alpha = 10
@@ -71,15 +80,10 @@ class Vae2D(ImageModelBase):
             loss = recon_loss + kld_loss
             loss.backward()
 
-            recon_loss_total += recon_loss.item() / samples
-            kld_loss_total += kld_loss.item() / samples
+            recon_loss_total += recon_loss.item() / self.hyper_parameters.gradient_updates
+            kld_loss_total += kld_loss.item() / self.hyper_parameters.gradient_updates
 
         self.optimizer.step()
         self.optimizer.zero_grad()
 
-        self.avg_loss.append(recon_loss_total + kld_loss_total)
-        if len(self.avg_loss) > 10:
-            self.avg_loss.pop(0)
-        avg_loss = sum(self.avg_loss) / len(self.avg_loss)
-
-        return '[recon_loss: {:.4f}, kld_loss: {:.4f}, avg_loss: {:.6f}]'.format(recon_loss_total, kld_loss_total, avg_loss)
+        return '[recon_loss: {:.4f}, kld_loss: {:.4f}]'.format(recon_loss_total, kld_loss_total)
