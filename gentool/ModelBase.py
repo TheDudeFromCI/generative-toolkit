@@ -7,10 +7,12 @@ from abc import abstractmethod
 
 import torch
 from torch import nn
+import torch.autograd as autograd
 from torch.optim.adam import Adam
 from torch.cuda import FloatTensor
 from torch.nn import functional as F
 from torchvision.utils import save_image
+from torch.autograd.variable import Variable
 
 
 class ModelBase(nn.Module):
@@ -104,8 +106,8 @@ class VaeModelBase(ImageModelBase):
         self.kld_weight = 1
         self.logcosh_alpha = 10
 
-        self.encoder = nn.Sequential()
-        self.decoder = nn.Sequential()
+        self.encoder = nn.Sequential()  # TODO
+        self.decoder = nn.Sequential()  # TODO
 
         self.mu = nn.Linear(latent_dim ** 2, latent_dim)
         self.var = nn.Linear(latent_dim ** 2, latent_dim)
@@ -123,6 +125,9 @@ class VaeModelBase(ImageModelBase):
         x = self.decoder(x)
         return x, mu, var
 
+    def random_latent(self):
+        return self.noise((self.latent_dim,))
+
     def vae_logcosh_loss(self, batch):
         generated, mu, var = self(batch)
 
@@ -136,7 +141,7 @@ class VaeModelBase(ImageModelBase):
     def sample_images(self):
         images, rows = self.sample_image_to_image(next(self.dataloader))
 
-        noise = self.noise(self.latent_dim)
+        noise = self.random_latent()
         images = torch.cat([images, self.decoder(noise)])
 
         return images, rows
@@ -155,3 +160,105 @@ class VaeModelBase(ImageModelBase):
         self.optimizer.step()
 
         return 'loss: {:.6f}'.format(vae_loss)
+
+
+class GanModelBase(ImageModelBase):
+    def __init__(self, dataloader, latent_dim, lr=1e-4, betas=(0.9, 0.99)):
+        super().__init__()
+
+        self.dataloader = dataloader
+        self.latent_dim = latent_dim
+        self.critic_updates = 5
+        self.gradient_penalty_lambda = 10
+
+        self.generator = nn.Sequential()  # TODO
+        self.discriminator = nn.Sequential()  # TODO
+
+        self.optimizer_g = Adam(self.generator.parameters(), lr=lr, betas=betas)
+        self.optimizer_d = Adam(self.discriminator.parameters(), lr=lr, betas=betas)
+
+    def forward(self, x):
+        return self.generator(x)
+
+    def sample_images(self):
+        return self.sample_image_from_noise((self.latent_dim,))
+
+    def wgan_gp_discriminator_loss(self, batch, noise):
+        d_loss_real = self.discriminator(batch).mean()
+
+        generated = self.generator(noise)
+        d_loss_fake = self.discriminator(generated).mean()
+
+        gradient_penalty = self.calculate_gradient_penalty(batch.data, generated.data)
+
+        return d_loss_fake - d_loss_real + gradient_penalty
+
+    def wgan_generator_loss(self, noise):
+        generated = self.generator(noise)
+        return -self.discriminator(generated).mean()
+
+    def calculate_gradient_penalty(self, real_data, fake_data):
+        alpha = FloatTensor(np.random.random((real_data.size(0), 1, 1, 1)))
+        # Get random interpolation between real and fake samples
+        interpolates = (alpha * real_data + ((1 - alpha) * fake_data)).requires_grad_(True)
+        d_interpolates = self.discriminator(interpolates)
+        fake = Variable(FloatTensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False)
+        # Get gradient w.r.t. interpolates
+        gradients = autograd.grad(
+            outputs=d_interpolates,
+            inputs=interpolates,
+            grad_outputs=fake,
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True,
+        )[0]
+        gradients = gradients.view(gradients.size(0), -1)
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+        return gradient_penalty * self.gradient_penalty_lambda
+
+    def gan_bce_discriminator_loss(self, batch, noise):
+        one = FloatTensor(np.ones((len(batch), 1)))
+        zero = FloatTensor(np.zeros((len(batch), 1)))
+
+        real_loss = F.binary_cross_entropy(self.discriminator(batch), one)
+        fake_loss = F.binary_cross_entropy(self.discriminator(self.generator(noise)), zero)
+
+        return real_loss + fake_loss
+
+    def gan_bce_generator_loss(self, noise):
+        one = FloatTensor(np.ones((len(noise), 1)))
+        return F.binary_cross_entropy(self.discriminator(self.generator(noise)), one)
+
+    def random_latent(self):
+        return self.noise((self.latent_dim,))
+
+    def train_batch(self):
+        g_loss = 0
+        d_loss = 0
+
+        for _ in range(self.critic_updates):
+            self.optimizer_d.zero_grad()
+
+            for _ in range(self.gradient_updates):
+                batch = next(self.dataloader)
+                noise = self.random_latent()
+
+                loss = self.wgan_gp_discriminator_loss(batch, noise)
+                loss.backward()
+
+                d_loss += loss.item() / self.gradient_updates / self.critic_updates
+
+            self.optimizer_d.step()
+
+        self.optimizer_g.zero_grad()
+        for _ in range(self.gradient_updates):
+            noise = self.random_latent()
+
+            loss = self.wgan_generator_loss(noise)
+            loss.backward()
+
+            g_loss += loss.item() / self.gradient_updates
+
+        self.optimizer_g.step()
+
+        return '[g_loss: {:.6f}, d_loss: {:.6f}]'.format(g_loss, d_loss)
