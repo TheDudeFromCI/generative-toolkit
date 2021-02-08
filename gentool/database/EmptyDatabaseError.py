@@ -1,2 +1,0 @@
-class EmptyDatabaseError(Exception):
-    pass
