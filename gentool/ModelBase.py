@@ -1,10 +1,15 @@
 import os
+import numpy as np
 from tqdm import tqdm
 from time import time
+from math import sqrt, log
 from abc import abstractmethod
 
 import torch
 from torch import nn
+from torch.optim.adam import Adam
+from torch.cuda import FloatTensor
+from torch.nn import functional as F
 from torchvision.utils import save_image
 
 
@@ -12,6 +17,8 @@ class ModelBase(nn.Module):
     def __init__(self):
         super().__init__()
         self.save_model_rate = 1000
+        self.batch_size = 16
+        self.gradient_updates = 1
 
     def save_model(self, update_number):
         os.makedirs('models', exist_ok=True)
@@ -36,17 +43,15 @@ class ModelBase(nn.Module):
         if update_number % self.save_model_rate == 0:
             self.save_model(update_number)
 
-    def format_logs(self, losses):
-        logs = {}
-
-        for i in range(len(losses)):
-            logs[self.loss_names[i]] = losses[i]
-
-        return logs
-
     @abstractmethod
-    def train_batch(self):
+    def train_batch(_):
         raise NotImplementedError
+
+    def noise(self, size):
+        if len(size) == 1 or len(size) == 3:
+            size = (self.batch_size, *size)
+
+        return FloatTensor(np.random.normal(0, 1, size))
 
 
 class ImageModelBase(ModelBase):
@@ -74,3 +79,79 @@ class ImageModelBase(ModelBase):
     @abstractmethod
     def sample_images(_):
         raise NotImplementedError
+
+    def sample_image_from_noise(self, size):
+        z = self.noise(size)
+        return self(z), int(sqrt(self.batch_size))
+
+    def sample_image_to_image(self, batch):
+        generated = self(batch)
+        images = [val for pair in zip(batch, generated) for val in pair]
+        return images, int(sqrt(len(batch))) * 2
+
+    def sample_image_to_image_masked(self, batch, modified):
+        generated = self(modified)
+        images = [val for pair in zip(batch, modified, generated) for val in pair]
+        return images, int(sqrt(len(batch))) * 3
+
+
+class VaeModelBase(ImageModelBase):
+    def __init__(self, dataloader, latent_dim, lr=1e-4):
+        super().__init__()
+
+        self.dataloader = dataloader
+        self.latent_dim = latent_dim
+        self.kld_weight = 1
+        self.logcosh_alpha = 10
+
+        self.encoder = nn.Sequential()
+        self.decoder = nn.Sequential()
+
+        self.mu = nn.Linear(latent_dim ** 2, latent_dim)
+        self.var = nn.Linear(latent_dim ** 2, latent_dim)
+
+        self.optimizer = Adam(self.parameters(), lr=lr)
+
+    def forward(self, x):
+        x = self.encoder(x)
+        mu, var = self.mu(x), self.var(x)
+
+        std = torch.exp(0.5 * var)
+        eps = torch.randn_like(std)
+        x = eps * std + mu
+
+        x = self.decoder(x)
+        return x, mu, var
+
+    def vae_logcosh_loss(self, batch):
+        generated, mu, var = self(batch)
+
+        t = generated - batch
+        recon_loss = self.logcosh_alpha * t + torch.log(1 + torch.exp(-2 * self.logcosh_alpha * t)) - log(2)
+        recon_loss = (1 / self.logcosh_alpha) * recon_loss.mean()
+
+        kld_loss = -0.5 * torch.mean(1 + var - mu ** 2 - var.exp()) * self.kld_weight
+        return recon_loss + kld_loss
+
+    def sample_images(self):
+        images, rows = self.sample_image_to_image(next(self.dataloader))
+
+        noise = self.noise(self.latent_dim)
+        images = torch.cat([images, self.decoder(noise)])
+
+        return images, rows
+
+    def train_batch(self):
+        vae_loss = 0
+
+        self.optimizer.zero_grad()
+        for _ in range(self.gradient_updates):
+            original = next(self.dataloader)
+            loss = self.vae_logcosh_loss(original)
+            loss.backward()
+
+            vae_loss += loss.item() / self.gradient_updates
+
+        self.optimizer.step()
+
+        return 'loss: {:.6f}'.format(vae_loss)
