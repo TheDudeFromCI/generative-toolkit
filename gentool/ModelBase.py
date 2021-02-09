@@ -16,12 +16,19 @@ from torchvision.utils import save_image
 from torch.autograd.variable import Variable
 
 
-def get_normalization(name, channels, image_size, groups=16):
+def get_normalization(name, channels, image_size):
+    flags = {}
+    if name.index(';') > 0:
+        parts = name.split(';')
+        name = parts[0].strip()
+        flags = dict(item.split('=') for item in parts[1].strip().split(' '))
+
     if name == 'batch':
         return nn.BatchNorm2d(channels)
 
     if name == 'group':
-        return nn.GroupNorm(min(groups, channels), channels)
+        groups = flags['groups'] if 'groups' in flags else 16
+        return nn.GroupNorm(groups, channels)
 
     if name == 'layer':
         return nn.LayerNorm((channels, image_size, image_size))
@@ -35,11 +42,18 @@ def get_normalization(name, channels, image_size, groups=16):
     assert False
 
 
-def get_activation(name, slope=0.01):
+def get_activation(name):
+    flags = {}
+    if name.index(';') > 0:
+        parts = name.split(';')
+        name = parts[0].strip()
+        flags = dict(item.split('=') for item in parts[1].strip().split(' '))
+
     if name == 'relu':
         return nn.ReLU()
 
     if name == 'leaky_relu':
+        slope = flags['slope'] if 'slope' in flags else 0.01
         return nn.LeakyReLU(negative_slope=slope)
 
     if name == 'sigmoid':
@@ -58,7 +72,7 @@ def get_activation(name, slope=0.01):
 
 
 def conv2d(in_channels, out_channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', downsample=False,
-           transpose=False, normalization_groups=16, activation_slope=0.01):
+           transpose=False):
     assert not (downsample and transpose), 'Cannot downsample and transpose at the same time!'
 
     if transpose:
@@ -71,76 +85,21 @@ def conv2d(in_channels, out_channels, image_size, kernel_size=3, normalization='
         conv = nn.utils.spectral_norm(conv)
         norm = nn.Identity()
     else:
-        norm = get_normalization(normalization, out_channels, image_size, groups=normalization_groups)
+        norm = get_normalization(normalization, out_channels, image_size)
 
-    activ = get_activation(activation, slope=activation_slope)
+    activ = get_activation(activation)
 
     return nn.Sequential(conv, norm, activ)
 
 
-def downsample_layers(channels, conv_counts, image_size, kernel_size=3, normalization='group', activation='leaky_relu',
-                      downsample_mode='stride', normalization_groups=16, activation_slope=0.01):
-    layers = []
-
-    for layer_index in range(len(conv_counts)):
-        for i in range(conv_counts[layer_index]):
-            downsample = downsample_mode == 'stride' and i == conv_counts[layer_index] - 1
-            in_channels = channels[layer_index]
-            out_channels = channels[layer_index + 1] if i == conv_counts[layer_index] - 1 else in_channels
-            norm_img_size = image_size // 2 if downsample else image_size
-
-            layers.append(conv2d(in_channels, out_channels, norm_img_size,
-                                 kernel_size=kernel_size, normalization=normalization,
-                                 activation=activation, downsample=downsample,
-                                 normalization_groups=normalization_groups,
-                                 activation_slope=activation_slope))
-
-        if downsample_mode == 'max_pool':
-            layers.append(nn.MaxPool2d((2, 2)))
-        elif downsample_mode == 'average_pool':
-            layers.append(nn.AvgPool2d((2, 2)))
-
-        image_size //= 2
-
-    return layers
-
-
-def upsample_layers(channels, conv_counts, image_size, kernel_size=3, normalization='group', activation='leaky_relu',
-                    upsample_mode='upsample_nearest', normalization_groups=16, activation_slope=0.01):
-    layers = []
-
-    for layer_index in range(len(conv_counts)):
-        for i in range(conv_counts[layer_index]):
-            transpose = upsample_mode == 'transpose' and i == conv_counts[layer_index] - 1
-            in_channels = channels[layer_index] if i == 0 else channels[layer_index + 1]
-            out_channels = channels[layer_index + 1]
-
-            layers.append(conv2d(in_channels, out_channels, image_size,
-                                 kernel_size=kernel_size, normalization=normalization,
-                                 activation=activation, transpose=transpose,
-                                 normalization_groups=normalization_groups,
-                                 activation_slope=activation_slope))
-
-        if upsample_mode == 'upsample_nearest':
-            layers.append(nn.UpsamplingNearest2d(scale_factor=2))
-        elif upsample_mode == 'upsample_bilinear':
-            layers.append(nn.UpsamplingBilinear2d(scale_factor=2))
-
-        image_size *= 2
-
-    return layers
-
-
 class SkipConnection(nn.Module):
-    def __init__(self, channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', skips=2,
-                 activation_slope=0.01, normalization_groups=16):
+    def __init__(self, channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', skips=2):
         super().__init__()
 
         assert normalization != 'spectral', 'Cannot use spectral normalization with skip connections!'
 
         self.conv1 = nn.Sequential(
-            *[conv2d(channels, channels, image_size, kernel_size=kernel_size, normalization=normalization,
-                     activation=activation, normalization_groups=normalization_groups, activation_slope=activation_slope)
+            *[conv2d(channels, channels, image_size, kernel_size=kernel_size, normalization=normalization)
               for _ in range(skips - 1)],
 
             nn.Conv2d(channels, channels, kernel_size, 1, kernel_size // 2),
