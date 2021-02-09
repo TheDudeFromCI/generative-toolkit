@@ -132,15 +132,16 @@ def upsample_layers(channels, conv_counts, image_size, kernel_size=3, normalizat
 
 
 class SkipConnection(nn.Module):
-    def __init__(self, channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', skips=2):
+    def __init__(self, channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', skips=2,
+                 activation_slope=0.01, normalization_groups=16):
         super().__init__()
 
         assert normalization != 'spectral', 'Cannot use spectral normalization with skip connections!'
 
         self.conv1 = nn.Sequential(
-            *[nn.Sequential(nn.Conv2d(channels, channels, kernel_size, 1, kernel_size // 2),
-                            get_normalization(normalization, channels, image_size),
-                            get_activation(activation)) for _ in range(skips - 1)],
+            *[conv2d(channels, channels, image_size, kernel_size=kernel_size, normalization=normalization,
+                     activation=activation, normalization_groups=normalization_groups, activation_slope=activation_slope)
+              for _ in range(skips - 1)],
 
             nn.Conv2d(channels, channels, kernel_size, 1, kernel_size // 2),
         )
@@ -193,9 +194,17 @@ class ModelBase(nn.Module):
         return FloatTensor(np.random.normal(0, 1, size))
 
     def count_params(self):
-        parameter_count = 0
-        for param in self.parameters():
-            parameter_count += param.numel()
+        parameter_count = {}
+
+        for attribute in dir(self):
+            model = getattr(self, attribute)
+            if not isinstance(model, nn.Module):
+                continue
+
+            parameter_count[attribute] = 0
+
+            for param in model.parameters():
+                parameter_count[attribute] += param.numel()
 
         return parameter_count
 
