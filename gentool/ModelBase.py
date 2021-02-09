@@ -6,6 +6,7 @@ from math import sqrt, log
 from abc import abstractmethod
 
 import torch
+import torchinfo
 from torch import nn
 import torch.autograd as autograd
 from torch.optim.adam import Adam
@@ -13,6 +14,145 @@ from torch.cuda import FloatTensor
 from torch.nn import functional as F
 from torchvision.utils import save_image
 from torch.autograd.variable import Variable
+
+
+def get_normalization(name, channels, image_size, groups=16):
+    if name == 'batch':
+        return nn.BatchNorm2d(channels)
+
+    if name == 'group':
+        return nn.GroupNorm(min(groups, channels), channels)
+
+    if name == 'layer':
+        return nn.LayerNorm((channels, image_size, image_size))
+
+    if name == 'instance':
+        return nn.InstanceNorm2d(channels)
+
+    if name == 'none':
+        return nn.Identity()
+
+    assert False
+
+
+def get_activation(name, slope=0.01):
+    if name == 'relu':
+        return nn.ReLU()
+
+    if name == 'leaky_relu':
+        return nn.LeakyReLU(negative_slope=slope)
+
+    if name == 'sigmoid':
+        return nn.Sigmoid()
+
+    if name == 'tanh':
+        return nn.Tanh()
+
+    if name == 'softmax':
+        return nn.Softmax()
+
+    if name == 'none':
+        return nn.Identity()
+
+    assert False
+
+
+def conv2d(in_channels, out_channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', downsample=False,
+           transpose=False, normalization_groups=16, activation_slope=0.01):
+    assert not (downsample and transpose), 'Cannot downsample and transpose at the same time!'
+
+    if transpose:
+        conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, 2, kernel_size // 2, 1)
+    else:
+        stride = 2 if downsample else 1
+        conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, kernel_size // 2)
+
+    if normalization == 'spectral':
+        conv = nn.utils.spectral_norm(conv)
+        norm = nn.Identity()
+    else:
+        norm = get_normalization(normalization, out_channels, image_size, groups=normalization_groups)
+
+    activ = get_activation(activation, slope=activation_slope)
+
+    return nn.Sequential(conv, norm, activ)
+
+
+def downsample_layers(channels, conv_counts, image_size, kernel_size=3, normalization='group', activation='leaky_relu',
+                      downsample_mode='stride', normalization_groups=16, activation_slope=0.01):
+    layers = []
+
+    for layer_index in range(len(conv_counts)):
+        for i in range(conv_counts[layer_index]):
+            downsample = downsample_mode == 'stride' and i == conv_counts[layer_index] - 1
+            in_channels = channels[layer_index]
+            out_channels = channels[layer_index + 1] if i == conv_counts[layer_index] - 1 else in_channels
+            norm_img_size = image_size // 2 if downsample else image_size
+
+            layers.append(conv2d(in_channels, out_channels, norm_img_size,
+                                 kernel_size=kernel_size, normalization=normalization,
+                                 activation=activation, downsample=downsample,
+                                 normalization_groups=normalization_groups,
+                                 activation_slope=activation_slope))
+
+        if downsample_mode == 'max_pool':
+            layers.append(nn.MaxPool2d((2, 2)))
+        elif downsample_mode == 'average_pool':
+            layers.append(nn.AvgPool2d((2, 2)))
+
+        image_size //= 2
+
+    return layers
+
+
+def upsample_layers(channels, conv_counts, image_size, kernel_size=3, normalization='group', activation='leaky_relu',
+                    upsample_mode='upsample_nearest', normalization_groups=16, activation_slope=0.01):
+    layers = []
+
+    for layer_index in range(len(conv_counts)):
+        for i in range(conv_counts[layer_index]):
+            transpose = upsample_mode == 'transpose' and i == conv_counts[layer_index] - 1
+            in_channels = channels[layer_index] if i == 0 else channels[layer_index + 1]
+            out_channels = channels[layer_index + 1]
+
+            layers.append(conv2d(in_channels, out_channels, image_size,
+                                 kernel_size=kernel_size, normalization=normalization,
+                                 activation=activation, transpose=transpose,
+                                 normalization_groups=normalization_groups,
+                                 activation_slope=activation_slope))
+
+        if upsample_mode == 'upsample_nearest':
+            layers.append(nn.UpsamplingNearest2d(scale_factor=2))
+        elif upsample_mode == 'upsample_bilinear':
+            layers.append(nn.UpsamplingBilinear2d(scale_factor=2))
+
+        image_size *= 2
+
+    return layers
+
+
+class SkipConnection(nn.Module):
+    def __init__(self, channels, image_size, kernel_size=3, normalization='group', activation='leaky_relu', skips=2):
+        super().__init__()
+
+        assert normalization != 'spectral', 'Cannot use spectral normalization with skip connections!'
+
+        self.conv1 = nn.Sequential(
+            *[nn.Sequential(nn.Conv2d(channels, channels, kernel_size, 1, kernel_size // 2),
+                            get_normalization(normalization, channels, image_size),
+                            get_activation(activation)) for _ in range(skips - 1)],
+
+            nn.Conv2d(channels, channels, kernel_size, 1, kernel_size // 2),
+        )
+
+        self.conv2 = nn.Sequential(
+            get_normalization(normalization, channels, image_size),
+            get_activation(activation),
+        )
+
+    def forward(self, x):
+        x = self.conv1(x) + x
+        return self.conv2(x)
 
 
 class ModelBase(nn.Module):
@@ -49,11 +189,15 @@ class ModelBase(nn.Module):
     def train_batch(_):
         raise NotImplementedError
 
-    def noise(self, size):
-        if len(size) == 1 or len(size) == 3:
-            size = (self.batch_size, *size)
-
+    def noise(_, size):
         return FloatTensor(np.random.normal(0, 1, size))
+
+    def count_params(self):
+        parameter_count = 0
+        for param in self.parameters():
+            parameter_count += param.numel()
+
+        return parameter_count
 
 
 class ImageModelBase(ModelBase):
@@ -98,21 +242,24 @@ class ImageModelBase(ModelBase):
 
 
 class VaeModelBase(ImageModelBase):
-    def __init__(self, dataloader, latent_dim, lr=1e-4):
+    def __init__(self, dataloader, encoder, decoder, latent_dim, lr=1e-4):
         super().__init__()
 
         self.dataloader = dataloader
         self.latent_dim = latent_dim
         self.kld_weight = 1
         self.logcosh_alpha = 10
+        self.sample_images = next(dataloader)
+        self.sample_noise = self.random_latent()
 
-        self.encoder = nn.Sequential()  # TODO
-        self.decoder = nn.Sequential()  # TODO
+        self.encoder = encoder
+        self.decoder = decoder
 
         self.mu = nn.Linear(latent_dim ** 2, latent_dim)
         self.var = nn.Linear(latent_dim ** 2, latent_dim)
 
         self.optimizer = Adam(self.parameters(), lr=lr)
+        self.cuda()
 
     def forward(self, x):
         x = self.encoder(x)
@@ -139,11 +286,8 @@ class VaeModelBase(ImageModelBase):
         return recon_loss + kld_loss
 
     def sample_images(self):
-        images, rows = self.sample_image_to_image(next(self.dataloader))
-
-        noise = self.random_latent()
-        images = torch.cat([images, self.decoder(noise)])
-
+        images, rows = self.sample_image_to_image(self.sample_images)
+        images = torch.cat([images, self.decoder(self.sample_noise)])
         return images, rows
 
     def train_batch(self):
@@ -163,25 +307,31 @@ class VaeModelBase(ImageModelBase):
 
 
 class GanModelBase(ImageModelBase):
-    def __init__(self, dataloader, latent_dim, lr=1e-4, betas=(0.9, 0.99)):
+    def __init__(self, dataloader, generator, discriminator, latent_dim, lr=1e-4, betas=(0.9, 0.99), summary=False):
         super().__init__()
 
         self.dataloader = dataloader
         self.latent_dim = latent_dim
         self.critic_updates = 5
         self.gradient_penalty_lambda = 10
+        self.sample_noise = self.noise((64, self.latent_dim))
 
-        self.generator = nn.Sequential()  # TODO
-        self.discriminator = nn.Sequential()  # TODO
+        self.generator = generator
+        self.discriminator = discriminator
 
         self.optimizer_g = Adam(self.generator.parameters(), lr=lr, betas=betas)
         self.optimizer_d = Adam(self.discriminator.parameters(), lr=lr, betas=betas)
+        self.cuda()
+
+        if summary:
+            torchinfo.summary(self, (1, self.latent_dim))
 
     def forward(self, x):
-        return self.generator(x)
+        return self.discriminator(self.generator(x))
 
     def sample_images(self):
-        return self.sample_image_from_noise((self.latent_dim,))
+        images = self.generator(self.sample_noise)
+        return images, 8
 
     def wgan_gp_discriminator_loss(self, batch, noise):
         d_loss_real = self.discriminator(batch).mean()
@@ -230,7 +380,7 @@ class GanModelBase(ImageModelBase):
         return F.binary_cross_entropy(self.discriminator(self.generator(noise)), one)
 
     def random_latent(self):
-        return self.noise((self.latent_dim,))
+        return self.noise((self.batch_size, self.latent_dim))
 
     def train_batch(self):
         g_loss = 0
