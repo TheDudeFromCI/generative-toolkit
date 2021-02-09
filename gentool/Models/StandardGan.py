@@ -1,6 +1,6 @@
-from gentool.ModelBase import GanModelBase
-from gentool.Database import numpy_dataloader
-from gentool.ModelLoader import load_network
+from ModelBase import GanModelBase
+from Database import numpy_dataloader
+from NetworkLoader import load_network
 
 
 def build_standard_wgan_gp(config):
@@ -14,9 +14,11 @@ def build_standard_wgan_gp(config):
     learning_rate = config['learning_rate']
     betas = config['beta1'], config['beta2']
 
+    latent_dim = config['latent_dim']
     print_summary = config['print_summary']
 
-    gan = GanModelBase(dataloader, generator, discriminator, lr=learning_rate, betas=betas, summary=print_summary)
+    gan = GanModelBase(dataloader, generator, discriminator, latent_dim,
+                       lr=learning_rate, betas=betas, summary=print_summary)
     gan.gradient_updates = config['gradient_updates']
     gan.save_snapshot_rate = config['save_snapshot_rate']
     gan.save_model_rate = config['save_model_rate']

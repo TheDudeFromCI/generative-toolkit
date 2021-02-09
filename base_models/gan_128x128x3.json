@@ -8,6 +8,10 @@
     "gradient_penalty_lambda": 10,
     "dataset": "./dataset",
     "print_summary": true,
+    "learning_rate": 0.0002,
+    "beta1": 0.5,
+    "beta2": 0.999,
+    "latent_dim": 2048,
     "generator": [
         {
             "type": "unflatten",
@@ -289,7 +293,7 @@
         {
             "type": "skip_conv",
             "count": 3,
-            "channels": 96,
+            "channels": 192,
             "image_size": 1,
             "kernel": 1,
             "normalization": "layer",
@@ -298,7 +302,7 @@
         {
             "type": "conv",
             "count": 1,
-            "in_channels": 96,
+            "in_channels": 192,
             "out_channels": 1,
             "image_size": 1,
             "kernel": 1,

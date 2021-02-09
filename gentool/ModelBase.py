@@ -18,7 +18,7 @@ from torch.autograd.variable import Variable
 
 def get_normalization(name, channels, image_size):
     flags = {}
-    if name.index(';') > 0:
+    if name.find(';') >= 0:
         parts = name.split(';')
         name = parts[0].strip()
         flags = dict(item.split('=') for item in parts[1].strip().split(' '))
@@ -27,7 +27,7 @@ def get_normalization(name, channels, image_size):
         return nn.BatchNorm2d(channels)
 
     if name == 'group':
-        groups = flags['groups'] if 'groups' in flags else 16
+        groups = int(flags['groups']) if 'groups' in flags else 16
         return nn.GroupNorm(groups, channels)
 
     if name == 'layer':
@@ -44,7 +44,7 @@ def get_normalization(name, channels, image_size):
 
 def get_activation(name):
     flags = {}
-    if name.index(';') > 0:
+    if name.find(';') >= 0:
         parts = name.split(';')
         name = parts[0].strip()
         flags = dict(item.split('=') for item in parts[1].strip().split(' '))
@@ -53,7 +53,7 @@ def get_activation(name):
         return nn.ReLU()
 
     if name == 'leaky_relu':
-        slope = flags['slope'] if 'slope' in flags else 0.01
+        slope = float(flags['slope']) if 'slope' in flags else 0.01
         return nn.LeakyReLU(negative_slope=slope)
 
     if name == 'sigmoid':
