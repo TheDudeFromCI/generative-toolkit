@@ -19,6 +19,7 @@ def build_standard_wgan_gp(config):
 
     gan = GanModelBase(dataloader, generator, discriminator, latent_dim,
                        lr=learning_rate, betas=betas, summary=print_summary)
+    gan.batch_size = batch_size
     gan.gradient_updates = config['gradient_updates']
     gan.save_snapshot_rate = config['save_snapshot_rate']
     gan.save_model_rate = config['save_model_rate']
