@@ -16,6 +16,32 @@ from torchvision.utils import save_image
 from torch.autograd.variable import Variable
 
 
+def get_normalization_1d(name, channels):
+    flags = {}
+    if name.find(';') >= 0:
+        parts = name.split(';')
+        name = parts[0].strip()
+        flags = dict(item.split('=') for item in parts[1].strip().split(' '))
+
+    if name == 'batch':
+        return nn.BatchNorm1d(channels)
+
+    if name == 'group':
+        groups = int(flags['groups']) if 'groups' in flags else 16
+        return nn.GroupNorm(groups, channels)
+
+    if name == 'layer':
+        return nn.LayerNorm((channels,))
+
+    if name == 'instance':
+        return nn.InstanceNorm1d(channels)
+
+    if name == 'none':
+        return nn.Identity()
+
+    assert False
+
+
 def get_normalization(name, channels, image_size):
     flags = {}
     if name.find(';') >= 0:

@@ -1,6 +1,6 @@
 from torch import nn
 
-from ModelBase import conv2d, SkipConnection
+from ModelBase import conv2d, SkipConnection, get_normalization_1d, get_activation
 
 
 def load_network(network_design):
@@ -64,6 +64,18 @@ def load_network(network_design):
 
             layers.append(conv2d(in_channels, out_channels, out_image_size, kernel_size=kernel,
                                  normalization=normalization, activation=activation, downsample=True))
+
+        elif layer_type == 'linear':
+            count = layer['count']
+            in_channels = layer['in_channels']
+            out_channels = layer['out_channels']
+            normalization = layer['normalization']
+            activation = layer['activation']
+
+            for _ in range(count):
+                layers.append(nn.Linear(in_channels, out_channels))
+                layers.append(get_normalization_1d(normalization, out_channels))
+                layers.append(get_activation(activation))
 
         else:
             assert False, f"Unknown layer type '{layer_type}'!"
