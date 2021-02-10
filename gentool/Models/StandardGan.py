@@ -7,16 +7,45 @@ from Database import numpy_dataloader
 
 
 class ResidualBlockDown(nn.Module):
-    def __init__(self, in_channels, out_channels, image_size, downsample):
+    def __init__(self, in_channels, out_channels, image_size, downsample_method):
         super().__init__()
 
-        if downsample:
+        if downsample_method == 'none':
+            if in_channels == out_channels:
+                self.shortcut = nn.Identity()
+            else:
+                self.shortcut = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+
+            conv_downsample = nn.Conv2d(in_channels, out_channels, 3, 1, 1)
+
+        elif downsample_method == 'avg_pool':
             self.shortcut = nn.Sequential(
                 nn.AvgPool2d(2, 2),
                 nn.Conv2d(in_channels, out_channels, 1, 1, 0),
             )
+
+            conv_downsample = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 3, 1, 1),
+                nn.AvgPool2d(2, 2),
+            )
+
+        elif downsample_method == 'max_pool':
+            self.shortcut = nn.Sequential(
+                nn.MaxPool2d(2, 2),
+                nn.Conv2d(in_channels, out_channels, 1, 1, 0),
+            )
+
+            conv_downsample = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 3, 1, 1),
+                nn.MaxPool2d(2, 2),
+            )
+
+        elif downsample_method == 'stride':
+            self.shortcut = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
+            conv_downsample = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
+
         else:
-            self.shortcut = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+            assert False, f"Unknown downsample method '{downsample_method}'!"
 
         self.conv = nn.Sequential(
             nn.LayerNorm((in_channels, image_size, image_size)),
@@ -26,8 +55,7 @@ class ResidualBlockDown(nn.Module):
             nn.LayerNorm((in_channels, image_size, image_size)),
             nn.LeakyReLU(),
 
-            nn.Conv2d(in_channels, out_channels, 3, 1, 1),
-            nn.AvgPool2d(2, 2) if downsample else nn.Identity(),
+            conv_downsample,
         )
 
     def forward(self, x):
@@ -35,20 +63,57 @@ class ResidualBlockDown(nn.Module):
 
 
 class ResidualBlockUp(nn.Module):
-    def __init__(self, in_channels, out_channels, upsample):
+    def __init__(self, in_channels, out_channels, upsample_method):
         super().__init__()
 
-        if upsample:
+        if upsample_method == 'none':
+            if in_channels == out_channels:
+                self.shortcut = nn.Identity()
+            else:
+                self.shortcut = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+
+            conv_upsample = nn.Conv2d(in_channels, out_channels, 3, 1, 1)
+
+        elif upsample_method == 'transpose':
             self.shortcut = nn.ConvTranspose2d(in_channels, out_channels, 4, 2, 1)
+            conv_upsample = nn.ConvTranspose2d(in_channels, out_channels, 4, 2, 1)
+
+        elif upsample_method == 'nearest':
+            if in_channels == out_channels:
+                self.shortcut = nn.UpsamplingNearest2d(scale_factor=2)
+            else:
+                self.shortcut = nn.Sequential(
+                    nn.UpsamplingNearest2d(scale_factor=2),
+                    nn.Conv2d(in_channels, out_channels, 1, 1, 0),
+                )
+
+            conv_upsample = nn.Sequential(
+                nn.UpsamplingNearest2d(scale_factor=2),
+                nn.Conv2d(in_channels, out_channels, 3, 1, 1)
+            )
+
+        elif upsample_method == 'bilinear':
+            if in_channels == out_channels:
+                self.shortcut = nn.UpsamplingBilinear2d(scale_factor=2)
+            else:
+                self.shortcut = nn.Sequential(
+                    nn.UpsamplingBilinear2d(scale_factor=2),
+                    nn.Conv2d(in_channels, out_channels, 1, 1, 0),
+                )
+
+            conv_upsample = nn.Sequential(
+                nn.UpsamplingBilinear2d(scale_factor=2),
+                nn.Conv2d(in_channels, out_channels, 3, 1, 1)
+            )
+
         else:
-            self.shortcut = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+            assert False, f"Unknown upsample method '{upsample_method}'!"
 
         self.conv = nn.Sequential(
             nn.BatchNorm2d(in_channels),
             nn.LeakyReLU(),
 
-            nn.ConvTranspose2d(in_channels, out_channels, 4, 2, 1) if upsample else nn.Conv2d(
-                in_channels, out_channels, 3, 1, 1),
+            conv_upsample,
             nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(),
 
@@ -59,7 +124,7 @@ class ResidualBlockUp(nn.Module):
         return self.conv(x) + self.shortcut(x)
 
 
-def build_generator(image_channels, image_size, model_channels, max_channels, latent_dim, skip_blocks):
+def build_generator(image_channels, image_size, model_channels, max_channels, latent_dim, skip_blocks, upsample_method):
     upsamples = int(log2(image_size)) - 2
 
     def res_block():
@@ -69,9 +134,9 @@ def build_generator(image_channels, image_size, model_channels, max_channels, la
             out_channels = min((1 << index) * 1 * model_channels, max_channels)
 
             for _ in range(skip_blocks - 1):
-                blocks.append(ResidualBlockUp(in_channels, in_channels, False))
+                blocks.append(ResidualBlockUp(in_channels, in_channels, 'none'))
 
-            blocks.append(ResidualBlockUp(in_channels, out_channels, True))
+            blocks.append(ResidualBlockUp(in_channels, out_channels, upsample_method))
         return blocks
 
     return nn.Sequential(
@@ -88,7 +153,7 @@ def build_generator(image_channels, image_size, model_channels, max_channels, la
     )
 
 
-def build_discriminator(image_channels, image_size, model_channels, max_channels, skip_blocks):
+def build_discriminator(image_channels, image_size, model_channels, max_channels, skip_blocks, downsample_method):
     downsamples = int(log2(image_size)) - 2
 
     def res_block():
@@ -97,10 +162,10 @@ def build_discriminator(image_channels, image_size, model_channels, max_channels
             in_channels = min((1 << index) * 1 * model_channels, max_channels)
             out_channels = min((1 << index) * 2 * model_channels, max_channels)
 
-            blocks.append(ResidualBlockDown(in_channels, out_channels, image_size >> index, True))
+            blocks.append(ResidualBlockDown(in_channels, out_channels, image_size >> index, downsample_method))
 
             for _ in range(skip_blocks - 1):
-                blocks.append(ResidualBlockDown(out_channels, out_channels, image_size >> (index + 1), False))
+                blocks.append(ResidualBlockDown(out_channels, out_channels, image_size >> (index + 1), 'none'))
 
         return blocks
 
@@ -117,17 +182,25 @@ def build_discriminator(image_channels, image_size, model_channels, max_channels
 def build_standard_wgan_gp(config):
     image_channels = config['image_channels']
     image_size = config['image_size']
-    model_channels = config['model_channels']
-    max_channels = config['max_channels'] if 'max_channels' in config else 128
     latent_dim = config['latent_dim']
-    skip_blocks = config['skip_blocks'] if 'skip_blocks' in config else 1
 
     learning_rate = config['learning_rate'] if 'learning_rate' in config else 1
     beta1 = config['beta1'] if 'beta1' in config else 0.9
     beta2 = config['beta2'] if 'beta2' in config else 0.999
 
-    generator = build_generator(image_channels, image_size, model_channels, max_channels, latent_dim, skip_blocks)
-    discriminator = build_discriminator(image_channels, image_size, model_channels, max_channels, skip_blocks)
+    upsample_method = config['upsample_method']
+    generator_model_channels = config['generator_model_channels']
+    generator_max_channels = config['generator_max_channels']
+    generator_skip_blocks = config['generator_skip_blocks'] if 'generator_skip_blocks' in config else 1
+    generator = build_generator(image_channels, image_size, generator_model_channels,
+                                generator_max_channels, latent_dim, generator_skip_blocks, upsample_method)
+
+    downsample_method = config['downsample_method']
+    discriminator_model_channels = config['discriminator_model_channels']
+    discriminator_max_channels = config['discriminator_max_channels']
+    discriminator_skip_blocks = config['discriminator_skip_blocks'] if 'discriminator_skip_blocks' in config else 1
+    discriminator = build_discriminator(image_channels, image_size, discriminator_model_channels,
+                                        discriminator_max_channels, discriminator_skip_blocks, downsample_method)
 
     batch_size = config['batch_size']
     dataset = config['dataset']
