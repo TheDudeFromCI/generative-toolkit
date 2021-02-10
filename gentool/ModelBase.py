@@ -199,6 +199,10 @@ class GanModelBase(ImageModelBase):
         if summary:
             torchinfo.summary(self, (1, self.latent_dim))
 
+            params = self.count_params()
+            print(
+                f"Loaded GAN with {params['generator']:,} generator params and {params['discriminator']:,} discriminator params.")
+
     def forward(self, x):
         return self.discriminator(self.generator(x))
 
