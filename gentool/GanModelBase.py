@@ -18,9 +18,12 @@ class GanModelBase(ImageModelBase):
         self.dataloader = dataloader
 
         self.latent_dim = generator.latent_dim
+        self.image_size = generator.image_size
+        self.image_channels = generator.image_channels
+        self.sample_noise = self.noise((64, self.latent_dim))
+
         self.critic_updates = 5
         self.gradient_penalty_lambda = 10
-        self.sample_noise = self.noise((64, self.latent_dim))
 
         self.cuda()
 
