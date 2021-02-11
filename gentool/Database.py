@@ -86,7 +86,7 @@ def save_batch(batch, output_folder, index):
 
 def numpy_dataloader(folder, batch_size, workers):
     dataloader = DataLoader(NumpyDataLoader(folder), batch_size=batch_size, num_workers=workers,
-                            persistent_workers=True, prefetch_factor=8, drop_last=True)
+                            persistent_workers=True, prefetch_factor=8, drop_last=True, shuffle=True)
 
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):
