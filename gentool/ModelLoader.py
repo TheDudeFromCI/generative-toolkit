@@ -1,6 +1,7 @@
 import json
 
 from GanModelBase import GanModelBase
+from AeModelBase import AeModelBase
 from Database import numpy_dataloader
 from Models.Encoder import Encoder
 from Models.Decoder import Decoder
@@ -14,6 +15,9 @@ def load_model(file):
 
     if model_type == 'wgan-gp':
         return build_standard_wgan_gp(config)
+
+    if model_type == 'ae':
+        return build_standard_ae(config)
 
     if model_type == 'encoder':
         return Encoder(config)
@@ -43,3 +47,22 @@ def build_standard_wgan_gp(config):
     gan.gradient_penalty_lambda = config['gradient_penalty_lambda'] if 'gradient_penalty_lambda' in config else 10
 
     return gan
+
+
+def build_standard_ae(config):
+    encoder = load_model(config['encoder'])
+    decoder = load_model(config['decoder'])
+
+    batch_size = config['batch_size']
+    dataset = config['dataset']
+    dataloader = numpy_dataloader(dataset, batch_size, 8)
+
+    print_summary = config['print_summary'] if 'print_summary' in config else False
+    ae = AeModelBase(dataloader, encoder, decoder, summary=print_summary)
+
+    ae.batch_size = batch_size
+    ae.gradient_updates = config['gradient_updates'] if 'gradient_updates' in config else 1
+    ae.save_snapshot_rate = config['save_snapshot_rate'] if 'save_snapshot_rate' in config else 100
+    ae.save_model_rate = config['save_model_rate'] if 'save_model_rate' in config else 1000
+
+    return ae
