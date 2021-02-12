@@ -90,8 +90,20 @@ def numpy_dataloader(folder, batch_size, workers):
 
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):
-            batch = Variable(batch.type(FloatTensor))
+            batch = batch.type(FloatTensor)
             yield batch
+
+
+def supervised_numpy_dataloader(sample_folder, label_folder, batch_size, workers):
+    dataloader = DataLoader(SupervisedNumpyDataLoader(sample_folder, label_folder), batch_size=batch_size,
+                            num_workers=workers, persistent_workers=True, prefetch_factor=8, drop_last=True, shuffle=True)
+
+    for loader in repeat(dataloader):
+        for _, batch in enumerate(loader):
+            sample, label = batch
+            sample = sample.type(FloatTensor)
+            label = label.type(FloatTensor)
+            yield sample, label
 
 
 class NumpyDataLoader(Dataset):
@@ -103,3 +115,18 @@ class NumpyDataLoader(Dataset):
 
     def __getitem__(self, index):
         return torch.from_numpy(np.load(self.files[index]))
+
+
+class SupervisedNumpyDataLoader(Dataset):
+    def __init__(self, data_folder, label_folder):
+        self.files = [join(data_folder, f) for f in sorted(listdir(data_folder))]
+        self.labels = [join(label_folder, f) for f in sorted(listdir(label_folder))]
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, index):
+        sample = torch.from_numpy(np.load(self.files[index]))
+        label = torch.from_numpy(np.load(self.labels[index]))
+
+        return sample, label
