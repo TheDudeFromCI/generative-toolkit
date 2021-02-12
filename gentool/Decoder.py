@@ -3,12 +3,13 @@ from math import log2
 from torch import nn
 from torch.optim.adam import Adam
 
-from Models.Blocks import ResidualBlockUp, get_normalization, get_normalization_1d, get_activation
+from Blocks import ResidualBlockUp, get_normalization, get_normalization_1d, get_activation
+from SubModuleBase import SubModuleBase
 
 
-class Decoder(nn.Module):
+class Decoder(SubModuleBase):
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config['save_file'])
 
         self.image_channels = config['image_channels']
         self.image_size = config['image_size']
