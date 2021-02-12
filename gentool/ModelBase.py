@@ -18,14 +18,13 @@ class ModelBase(nn.Module):
         self.batch_size = 16
         self.gradient_updates = 1
 
-    def save_model(self, update_number):
-        os.makedirs('models', exist_ok=True)
-        filename = 'models/up_{}.{}.pth.tar'.format(update_number, time())
-        torch.save(self.state_dict(), filename)
+    def save_model(self):
+        for model in self.get_sub_models():
+            model.save_model()
 
-    def load_model(self, filename):
-        state = torch.load(filename)
-        self.load_state_dict(state)
+    def load_model(self):
+        for model in self.get_sub_models():
+            model.load_model()
 
     def fit(self, n_updates, offset=0):
         with tqdm(range(offset, n_updates + offset), smoothing=0.0) as prog_bar:
@@ -39,7 +38,7 @@ class ModelBase(nn.Module):
 
     def batch_callback(self, update_number, losses):
         if update_number % self.save_model_rate == 0:
-            self.save_model(update_number)
+            self.save_model()
 
     @abstractmethod
     def train_batch(_):
@@ -47,6 +46,16 @@ class ModelBase(nn.Module):
 
     def noise(_, size):
         return FloatTensor(np.random.normal(0, 1, size))
+
+    def get_sub_models(self):
+        models = []
+
+        for attribute in dir(self):
+            model = getattr(self, attribute)
+            if isinstance(model, nn.Module):
+                models.append(model)
+
+        return models
 
     def count_params(self):
         parameter_count = {}
