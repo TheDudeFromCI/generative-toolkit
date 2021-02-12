@@ -44,7 +44,7 @@ class GanModelBase(ImageModelBase):
     def wgan_gp_discriminator_loss(self, batch, noise):
         d_loss_real = self.discriminator(batch).mean()
 
-        generated = self.generator(noise)
+        generated = self.generator(noise).detach()
         d_loss_fake = self.discriminator(generated).mean()
 
         gradient_penalty = self.calculate_gradient_penalty(batch.data, generated.data)
