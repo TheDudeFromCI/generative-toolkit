@@ -83,6 +83,7 @@ class Encoder(SubModuleBase):
         )
 
         self.optimizer = Adam(self.parameters(), lr=learning_rate, betas=(beta1, beta2))
+        self.try_load()
 
     def forward(self, x):
         return self.model(x)

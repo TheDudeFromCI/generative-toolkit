@@ -8,6 +8,7 @@ class SubModuleBase(nn.Module):
         super().__init__()
         self.save_file = save_file
 
+    def try_load(self):
         if os.path.exists(self.save_file):
             self.load_model()
 
