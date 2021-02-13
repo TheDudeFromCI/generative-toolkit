@@ -5,8 +5,8 @@ from Encoder import Encoder
 
 
 class KLEncoder(Encoder):
-    def __init__(self, config):
-        super().__init__(config)
+    def create_network(self, config):
+        super().create_network(config)
 
         self.mu = nn.Linear(self.latent_dim, self.latent_dim)
         self.var = nn.Linear(self.latent_dim, self.latent_dim)
