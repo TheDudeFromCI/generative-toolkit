@@ -19,7 +19,7 @@ class VaeModelBase(ImageModelBase):
         self.image_channels = decoder.image_channels
 
         self.sample_img = next(dataloader)
-        self.sample_noise = self.noise((64, self.latent_dim))
+        self.sample_noise = self.noise((len(self.sample_img), self.latent_dim))
 
         self.kld_weight = 1
         self.logcosh_alpha = 10
@@ -54,7 +54,7 @@ class VaeModelBase(ImageModelBase):
     def sample_images(self):
         generated, _, _ = self(self.sample_img)
         images = [val for pair in zip(self.sample_img, generated) for val in pair]
-        rows = int(sqrt(len(self.sample_img))) * 2
+        rows = int(sqrt(len(self.sample_img))) * 3
 
         images = [*images, *self.decoder(self.sample_noise)]
         return images, rows
