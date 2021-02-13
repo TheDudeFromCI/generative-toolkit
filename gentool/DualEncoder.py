@@ -91,7 +91,6 @@ class DualEncoder(SubModuleBase):
         self.latent_2_model = nn.Sequential(*dense_block(dense_layers_2, self.latent_dim_2, output_activation_2))
 
         self.optimizer = Adam(self.parameters(), lr=learning_rate, betas=(beta1, beta2))
-        self.try_load()
 
     def forward(self, x):
         x = self.model(x)
