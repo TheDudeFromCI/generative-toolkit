@@ -1,14 +1,13 @@
-from math import log
+from math import log, sqrt
 
 import torch
-from torch import nn
-from torch.optim.adam import Adam
+import torchinfo
 
-from gentool.ModelBase import ImageModelBase
+from ModelBase import ImageModelBase
 
 
 class VaeModelBase(ImageModelBase):
-    def __init__(self, dataloader, encoder, decoder):
+    def __init__(self, dataloader, encoder, decoder, summary=False):
         super().__init__()
 
         self.dataloader = dataloader
@@ -26,6 +25,13 @@ class VaeModelBase(ImageModelBase):
         self.logcosh_alpha = 10
 
         self.cuda()
+
+        if summary:
+            torchinfo.summary(self, (1, self.image_channels, self.image_size, self.image_size))
+
+            params = self.count_params()
+            print(
+                f"Loaded VAE with {params['encoder']:,} encoder params and {params['decoder']:,} decoder params.")
 
     def forward(self, x):
         x, mu, var = self.encoder(x)
@@ -46,8 +52,11 @@ class VaeModelBase(ImageModelBase):
         return recon_loss + kld_loss
 
     def sample_images(self):
-        images, rows = self.sample_image_to_image(self.sample_img)
-        images = torch.cat([images, self.decoder(self.sample_noise)])
+        generated, _, _ = self(self.sample_img)
+        images = [val for pair in zip(self.sample_img, generated) for val in pair]
+        rows = int(sqrt(len(self.sample_img))) * 2
+
+        images = [*images, *self.decoder(self.sample_noise)]
         return images, rows
 
     def train_batch(self):
