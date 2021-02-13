@@ -13,7 +13,6 @@ from PIL import Image, UnidentifiedImageError
 import torch
 from torch.cuda import FloatTensor
 from torch.utils.data import Dataset
-from torch.autograd.variable import Variable
 from torch.utils.data.dataloader import DataLoader
 
 
@@ -41,7 +40,7 @@ def pre_generate_dataset_parallel(image_folders, transform, output_folder, sampl
     samples_each = ceil(sample_count / workers)
 
     def pre_generate_dataset(offset):
-        for i in tqdm(range(sample_count)):
+        for i in tqdm(range(samples_each)):
             while True:
                 try:
                     img_name = files[randint(0, len(files) - 1)]
