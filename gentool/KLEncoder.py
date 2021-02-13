@@ -1,5 +1,8 @@
+import numpy as np
+
 import torch
 from torch import nn
+from torch.cuda import FloatTensor
 
 from Encoder import Encoder
 
@@ -16,7 +19,7 @@ class KLEncoder(Encoder):
         mu, var = self.mu(x), self.var(x)
 
         std = torch.exp(0.5 * var)
-        eps = torch.randn_like(std)
+        eps = FloatTensor(np.random.normal(0, 1, std.shape))
         x = eps * std + mu
 
         return x, mu, var
