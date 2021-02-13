@@ -8,9 +8,7 @@ from SubModuleBase import SubModuleBase
 
 
 class DualEncoder(SubModuleBase):
-    def __init__(self, config):
-        super().__init__(config['save_file'])
-
+    def create_network(self, config):
         self.image_channels = config['image_channels']
         self.image_size = config['image_size']
 
