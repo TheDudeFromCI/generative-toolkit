@@ -8,33 +8,27 @@ from gentool.ModelBase import ImageModelBase
 
 
 class VaeModelBase(ImageModelBase):
-    def __init__(self, dataloader, encoder, decoder, latent_dim, lr=1e-4):
+    def __init__(self, dataloader, encoder, decoder):
         super().__init__()
 
         self.dataloader = dataloader
-        self.latent_dim = latent_dim
-        self.kld_weight = 1
-        self.logcosh_alpha = 10
-        self.sample_images = next(dataloader)
-        self.sample_noise = self.random_latent()
-
         self.encoder = encoder
         self.decoder = decoder
 
-        self.mu = nn.Linear(latent_dim ** 2, latent_dim)
-        self.var = nn.Linear(latent_dim ** 2, latent_dim)
+        self.latent_dim = decoder.latent_dim
+        self.image_size = decoder.image_size
+        self.image_channels = decoder.image_channels
 
-        self.optimizer = Adam(self.parameters(), lr=lr)
+        self.sample_img = next(dataloader)
+        self.sample_noise = self.noise((64, self.latent_dim))
+
+        self.kld_weight = 1
+        self.logcosh_alpha = 10
+
         self.cuda()
 
     def forward(self, x):
-        x = self.encoder(x)
-        mu, var = self.mu(x), self.var(x)
-
-        std = torch.exp(0.5 * var)
-        eps = torch.randn_like(std)
-        x = eps * std + mu
-
+        x, mu, var = self.encoder(x)
         x = self.decoder(x)
         return x, mu, var
 
@@ -52,14 +46,15 @@ class VaeModelBase(ImageModelBase):
         return recon_loss + kld_loss
 
     def sample_images(self):
-        images, rows = self.sample_image_to_image(self.sample_images)
+        images, rows = self.sample_image_to_image(self.sample_img)
         images = torch.cat([images, self.decoder(self.sample_noise)])
         return images, rows
 
     def train_batch(self):
         vae_loss = 0
 
-        self.optimizer.zero_grad()
+        self.encoder.optimizer.zero_grad()
+        self.decoder.optimizer.zero_grad()
         for _ in range(self.gradient_updates):
             original = next(self.dataloader)
             loss = self.vae_logcosh_loss(original)
@@ -67,6 +62,7 @@ class VaeModelBase(ImageModelBase):
 
             vae_loss += loss.item() / self.gradient_updates
 
-        self.optimizer.step()
+        self.encoder.optimizer.step()
+        self.decoder.optimizer.step()
 
         return 'loss: {:.6f}'.format(vae_loss)
