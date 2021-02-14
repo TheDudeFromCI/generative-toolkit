@@ -12,18 +12,19 @@ def main():
     parser.add_argument("--model", type=str, help="The model to loader.")
     parser.add_argument("--iterations", type=int, default=10000, help="Number of iterations to train for.")
     parser.add_argument("--itr_offset", type=int, default=0, help="Iteration count offset.")
-    parser.add_argument("--no_cuda", action='store_false', help="Disables loading to GPU.")
+    parser.add_argument("--no_cuda", action='store_true', help="Disables loading to GPU.")
 
     opt = parser.parse_args()
+    cuda = not opt.no_cuda
 
     if opt.model is None:
         print('Model not defined!')
         sys.exit(1)
 
-    if opt.cuda:
+    if cuda:
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-    model = load_model(opt.model, opt.cuda)
+    model = load_model(opt.model, cuda)
 
     if opt.training:
         model.train()

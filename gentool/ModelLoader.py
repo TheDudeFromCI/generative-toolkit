@@ -20,25 +20,25 @@ def load_model(file, cuda):
     if model_type == 'wgan-gp':
         model = build_standard_wgan_gp(config, cuda)
 
-    if model_type == 'ae':
+    elif model_type == 'ae':
         model = build_standard_ae(config, cuda)
 
-    if model_type == 'vae':
+    elif model_type == 'vae':
         model = build_standard_vae(config, cuda)
 
-    if model_type == 'labeled_gan':
+    elif model_type == 'labeled_gan':
         model = build_labeled_gan(config, cuda)
 
-    if model_type == 'encoder':
+    elif model_type == 'encoder':
         model = Encoder(config)
 
-    if model_type == 'kl-encoder':
+    elif model_type == 'kl-encoder':
         model = KLEncoder(config)
 
-    if model_type == 'decoder':
+    elif model_type == 'decoder':
         model = Decoder(config)
 
-    if model_type == 'dual-encoder':
+    elif model_type == 'dual-encoder':
         model = DualEncoder(config)
 
     else:
