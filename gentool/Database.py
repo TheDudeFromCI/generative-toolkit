@@ -82,22 +82,22 @@ def save_batch(batch, output_folder, index):
     np.save(file, batch.numpy())
 
 
-def numpy_dataloader(folder, batch_size):
+def numpy_dataloader(folder, batch_size, cuda=True):
     dataloader = DataLoader(NumpyDataLoader(folder), batch_size=batch_size, num_workers=8, pin_memory=True,
                             persistent_workers=False, prefetch_factor=16, drop_last=True, shuffle=True)
 
-    dtype = torch.get_default_dtype()
+    dtype = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):
             batch = batch.type(dtype)
             yield batch
 
 
-def supervised_numpy_dataloader(sample_folder, label_folder, batch_size):
+def supervised_numpy_dataloader(sample_folder, label_folder, batch_size, cuda=True):
     dataloader = DataLoader(SupervisedNumpyDataLoader(sample_folder, label_folder), batch_size=batch_size, pin_memory=True,
                             num_workers=8, persistent_workers=True, prefetch_factor=16, drop_last=True, shuffle=True)
 
-    dtype = torch.get_default_dtype()
+    dtype = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):
             sample, label = batch

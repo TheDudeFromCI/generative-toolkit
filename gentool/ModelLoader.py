@@ -11,46 +11,52 @@ from DualEncoder import DualEncoder
 from Database import numpy_dataloader, supervised_numpy_dataloader
 
 
-def load_model(file):
+def load_model(file, cuda):
     with open(file) as f:
         config = json.load(f)
 
     model_type = config['model_type']
 
     if model_type == 'wgan-gp':
-        return build_standard_wgan_gp(config)
+        model = build_standard_wgan_gp(config, cuda)
 
     if model_type == 'ae':
-        return build_standard_ae(config)
+        model = build_standard_ae(config, cuda)
 
     if model_type == 'vae':
-        return build_standard_vae(config)
+        model = build_standard_vae(config, cuda)
 
     if model_type == 'labeled_gan':
-        return build_labeled_gan(config)
+        model = build_labeled_gan(config, cuda)
 
     if model_type == 'encoder':
-        return Encoder(config)
+        model = Encoder(config)
 
     if model_type == 'kl-encoder':
-        return KLEncoder(config)
+        model = KLEncoder(config)
 
     if model_type == 'decoder':
-        return Decoder(config)
+        model = Decoder(config)
 
     if model_type == 'dual-encoder':
-        return DualEncoder(config)
+        model = DualEncoder(config)
 
-    assert False, f"Unknown model type '{model_type}'!"
+    else:
+        assert False, f"Unknown model type '{model_type}'!"
+
+    if cuda:
+        model.cuda()
+
+    return model
 
 
-def build_standard_wgan_gp(config):
-    generator = load_model(config['generator'])
-    discriminator = load_model(config['discriminator'])
+def build_standard_wgan_gp(config, cuda):
+    generator = load_model(config['generator'], cuda)
+    discriminator = load_model(config['discriminator'], cuda)
 
     batch_size = config['batch_size']
     dataset = config['dataset']
-    dataloader = numpy_dataloader(dataset, batch_size)
+    dataloader = numpy_dataloader(dataset, batch_size, cuda)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     gan = GanModelBase(dataloader, generator, discriminator, summary=print_summary)
@@ -65,13 +71,13 @@ def build_standard_wgan_gp(config):
     return gan
 
 
-def build_standard_ae(config):
-    encoder = load_model(config['encoder'])
-    decoder = load_model(config['decoder'])
+def build_standard_ae(config, cuda):
+    encoder = load_model(config['encoder'], cuda)
+    decoder = load_model(config['decoder'], cuda)
 
     batch_size = config['batch_size']
     dataset = config['dataset']
-    dataloader = numpy_dataloader(dataset, batch_size)
+    dataloader = numpy_dataloader(dataset, batch_size, cuda)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     ae = AeModelBase(dataloader, encoder, decoder, summary=print_summary)
@@ -84,14 +90,14 @@ def build_standard_ae(config):
     return ae
 
 
-def build_labeled_gan(config):
-    generator = load_model(config['generator'])
-    discriminator = load_model(config['discriminator'])
+def build_labeled_gan(config, cuda):
+    generator = load_model(config['generator'], cuda)
+    discriminator = load_model(config['discriminator'], cuda)
 
     batch_size = config['batch_size']
     dataset_samples = config['dataset_samples']
     dataset_labels = config['dataset_labels']
-    dataloader = supervised_numpy_dataloader(dataset_samples, dataset_labels, batch_size, 8)
+    dataloader = supervised_numpy_dataloader(dataset_samples, dataset_labels, batch_size, cuda)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     gan = LabeledGan(dataloader, generator, discriminator, summary=print_summary)
@@ -107,13 +113,13 @@ def build_labeled_gan(config):
     return gan
 
 
-def build_standard_vae(config):
-    encoder = load_model(config['encoder'])
-    decoder = load_model(config['decoder'])
+def build_standard_vae(config, cuda):
+    encoder = load_model(config['encoder'], cuda)
+    decoder = load_model(config['decoder'], cuda)
 
     batch_size = config['batch_size']
     dataset = config['dataset']
-    dataloader = numpy_dataloader(dataset, batch_size)
+    dataloader = numpy_dataloader(dataset, batch_size, cuda)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     vae = VaeModelBase(dataloader, encoder, decoder, summary=print_summary)
