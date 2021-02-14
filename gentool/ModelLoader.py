@@ -50,7 +50,7 @@ def build_standard_wgan_gp(config):
 
     batch_size = config['batch_size']
     dataset = config['dataset']
-    dataloader = numpy_dataloader(dataset, batch_size, 8)
+    dataloader = numpy_dataloader(dataset, batch_size)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     gan = GanModelBase(dataloader, generator, discriminator, summary=print_summary)
@@ -71,7 +71,7 @@ def build_standard_ae(config):
 
     batch_size = config['batch_size']
     dataset = config['dataset']
-    dataloader = numpy_dataloader(dataset, batch_size, 8)
+    dataloader = numpy_dataloader(dataset, batch_size)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     ae = AeModelBase(dataloader, encoder, decoder, summary=print_summary)
@@ -113,7 +113,7 @@ def build_standard_vae(config):
 
     batch_size = config['batch_size']
     dataset = config['dataset']
-    dataloader = numpy_dataloader(dataset, batch_size, 8)
+    dataloader = numpy_dataloader(dataset, batch_size)
 
     print_summary = config['print_summary'] if 'print_summary' in config else False
     vae = VaeModelBase(dataloader, encoder, decoder, summary=print_summary)
