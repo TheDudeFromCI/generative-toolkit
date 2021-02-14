@@ -1,11 +1,6 @@
 from torch import nn
 
 
-class SubNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-
 class ResidualBlockDown(nn.Module):
     def __init__(self, in_channels, out_channels, image_size, downsample_method, kernel):
         super().__init__()

@@ -1,7 +1,5 @@
-import numpy as np
-
+import torch
 from torch import autograd
-from torch.cuda import FloatTensor
 from torch.nn import functional as F
 from torch.autograd.variable import Variable
 
@@ -29,11 +27,11 @@ class LabeledGan(GanModelBase):
         return d_loss_fake - d_loss_real + gradient_penalty + latent_loss
 
     def calculate_gradient_penalty(self, real_data, fake_data):
-        alpha = FloatTensor(np.random.random((real_data.size(0), 1, 1, 1)))
+        alpha = torch.rand((real_data.size(0), 1, 1, 1))
         # Get random interpolation between real and fake samples
         interpolates = (alpha * real_data + ((1 - alpha) * fake_data)).requires_grad_(True)
         d_interpolates, _ = self.discriminator(interpolates)
-        fake = Variable(FloatTensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False)
+        fake = Variable(torch.ones((real_data.shape[0], 1)), requires_grad=False)
         # Get gradient w.r.t. interpolates
         gradients = autograd.grad(
             outputs=d_interpolates,

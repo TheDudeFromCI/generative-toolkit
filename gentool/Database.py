@@ -11,7 +11,6 @@ from multiprocessing import Process
 from PIL import Image, UnidentifiedImageError
 
 import torch
-from torch.cuda import FloatTensor
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 
@@ -83,25 +82,27 @@ def save_batch(batch, output_folder, index):
     np.save(file, batch.numpy())
 
 
-def numpy_dataloader(folder, batch_size, workers):
-    dataloader = DataLoader(NumpyDataLoader(folder), batch_size=batch_size, num_workers=workers,
-                            persistent_workers=True, prefetch_factor=8, drop_last=True, shuffle=True)
+def numpy_dataloader(folder, batch_size):
+    dataloader = DataLoader(NumpyDataLoader(folder), batch_size=batch_size, num_workers=8, pin_memory=True,
+                            persistent_workers=False, prefetch_factor=16, drop_last=True, shuffle=True)
 
+    dtype = torch.get_default_dtype()
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):
-            batch = batch.type(FloatTensor)
+            batch = batch.type(dtype)
             yield batch
 
 
-def supervised_numpy_dataloader(sample_folder, label_folder, batch_size, workers):
-    dataloader = DataLoader(SupervisedNumpyDataLoader(sample_folder, label_folder), batch_size=batch_size,
-                            num_workers=workers, persistent_workers=True, prefetch_factor=8, drop_last=True, shuffle=True)
+def supervised_numpy_dataloader(sample_folder, label_folder, batch_size):
+    dataloader = DataLoader(SupervisedNumpyDataLoader(sample_folder, label_folder), batch_size=batch_size, pin_memory=True,
+                            num_workers=8, persistent_workers=True, prefetch_factor=16, drop_last=True, shuffle=True)
 
+    dtype = torch.get_default_dtype()
     for loader in repeat(dataloader):
         for _, batch in enumerate(loader):
             sample, label = batch
-            sample = sample.type(FloatTensor)
-            label = label.type(FloatTensor)
+            sample = sample.type(dtype)
+            label = label.type(dtype)
             yield sample, label
 
 

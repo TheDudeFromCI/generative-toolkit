@@ -1,5 +1,4 @@
 import os
-import numpy as np
 from tqdm import tqdm
 from time import time
 from math import sqrt
@@ -7,7 +6,6 @@ from abc import abstractmethod
 
 import torch
 from torch import nn
-from torch.cuda import FloatTensor
 from torchvision.utils import save_image
 
 
@@ -45,7 +43,7 @@ class ModelBase(nn.Module):
         raise NotImplementedError
 
     def noise(_, size):
-        return FloatTensor(np.random.normal(0, 1, size))
+        return torch.normal(0.0, 1.0, size=size)
 
     def get_sub_models(self):
         models = []

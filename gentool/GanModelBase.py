@@ -1,8 +1,6 @@
-import numpy as np
-
+import torch
 import torchinfo
 import torch.autograd as autograd
-from torch.cuda import FloatTensor
 from torch.nn import functional as F
 from torch.autograd.variable import Variable
 
@@ -56,11 +54,11 @@ class GanModelBase(ImageModelBase):
         return -self.discriminator(generated).mean()
 
     def calculate_gradient_penalty(self, real_data, fake_data):
-        alpha = FloatTensor(np.random.random((real_data.size(0), 1, 1, 1)))
+        alpha = torch.rand((real_data.size(0), 1, 1, 1))
         # Get random interpolation between real and fake samples
         interpolates = (alpha * real_data + ((1 - alpha) * fake_data)).requires_grad_(True)
         d_interpolates = self.discriminator(interpolates)
-        fake = Variable(FloatTensor(real_data.shape[0], 1).fill_(1.0), requires_grad=False)
+        fake = Variable(torch.ones((real_data.shape[0], 1)), requires_grad=False)
         # Get gradient w.r.t. interpolates
         gradients = autograd.grad(
             outputs=d_interpolates,
@@ -75,8 +73,8 @@ class GanModelBase(ImageModelBase):
         return gradient_penalty * self.gradient_penalty_lambda
 
     def gan_bce_discriminator_loss(self, batch, noise):
-        one = FloatTensor(np.ones((len(batch), 1)))
-        zero = FloatTensor(np.zeros((len(batch), 1)))
+        one = torch.ones((len(batch), 1))
+        zero = torch.zeros((len(batch), 1))
 
         real_loss = F.binary_cross_entropy(self.discriminator(batch), one)
         fake_loss = F.binary_cross_entropy(self.discriminator(self.generator(noise)), zero)
@@ -84,7 +82,7 @@ class GanModelBase(ImageModelBase):
         return real_loss + fake_loss
 
     def gan_bce_generator_loss(self, noise):
-        one = FloatTensor(np.ones((len(noise), 1)))
+        one = torch.ones((len(noise), 1))
         return F.binary_cross_entropy(self.discriminator(self.generator(noise)), one)
 
     def random_latent(self):

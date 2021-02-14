@@ -30,8 +30,7 @@ class VaeModelBase(ImageModelBase):
             torchinfo.summary(self, (1, self.image_channels, self.image_size, self.image_size))
 
             params = self.count_params()
-            print(
-                f"Loaded VAE with {params['encoder']:,} encoder params and {params['decoder']:,} decoder params.")
+            print(f"Loaded VAE with {params['encoder']:,} encoder params and {params['decoder']:,} decoder params.")
 
     def forward(self, x):
         x, mu, var = self.encoder(x)
