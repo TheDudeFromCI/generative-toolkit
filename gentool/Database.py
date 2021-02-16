@@ -95,7 +95,7 @@ def numpy_dataloader(folder, batch_size, cuda=True):
 
 def supervised_numpy_dataloader(sample_folder, label_folder, batch_size, cuda=True):
     dataloader = DataLoader(SupervisedNumpyDataLoader(sample_folder, label_folder), batch_size=batch_size, pin_memory=True,
-                            num_workers=8, persistent_workers=True, prefetch_factor=16, drop_last=True, shuffle=True)
+                            num_workers=8, persistent_workers=False, prefetch_factor=16, drop_last=True, shuffle=True)
 
     dtype = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     for loader in repeat(dataloader):

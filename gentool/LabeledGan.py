@@ -15,6 +15,7 @@ class LabeledGan(GanModelBase):
         d_loss_real = d_loss_real.mean()
 
         generated = self.generator(noise).detach()
+        generated, noise = self.swapper.swap(generated, noise)
         d_loss_fake, d_latent_fake = self.discriminator(generated)
         d_loss_fake = d_loss_fake.mean()
 

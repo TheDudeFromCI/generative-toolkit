@@ -5,6 +5,7 @@ from torch.nn import functional as F
 from torch.autograd.variable import Variable
 
 from ModelBase import ImageModelBase
+from GanImageSwapper import GanImageSwapper
 
 
 class GanModelBase(ImageModelBase):
@@ -15,15 +16,18 @@ class GanModelBase(ImageModelBase):
         self.discriminator = discriminator
         self.dataloader = dataloader
 
+        self.batch_size = 1
         self.latent_dim = generator.latent_dim
         self.image_size = generator.image_size
         self.image_channels = generator.image_channels
         self.sample_noise = self.noise((64, self.latent_dim))
 
+        self.swap_buffer = 512
+        self.swap_chance = 0.5
+        self.swapper = None  # So we can have a chance to modify settings before start
+
         self.critic_updates = 5
         self.gradient_penalty_lambda = 10
-
-        self.cuda()
 
         if summary:
             torchinfo.summary(self, (1, self.latent_dim))
@@ -43,6 +47,8 @@ class GanModelBase(ImageModelBase):
         d_loss_real = self.discriminator(batch).mean()
 
         generated = self.generator(noise).detach()
+        generated = self.swapper.swap(generated)
+
         d_loss_fake = self.discriminator(generated).mean()
 
         gradient_penalty = self.calculate_gradient_penalty(batch.data, generated.data)
@@ -87,6 +93,13 @@ class GanModelBase(ImageModelBase):
 
     def random_latent(self):
         return self.noise((self.batch_size, self.latent_dim))
+
+    def fit(self, *args, **kargs):
+        if self.swapper is None:
+            self.swapper = GanImageSwapper(self.generator, (self.batch_size, self.latent_dim),
+                                           self.swap_buffer, swap_chance=self.swap_chance)
+
+        super().fit(*args, **kargs)
 
     def train_batch(self):
         g_loss = 0

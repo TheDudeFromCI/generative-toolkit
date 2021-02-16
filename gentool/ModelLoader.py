@@ -65,6 +65,9 @@ def build_standard_wgan_gp(config, cuda):
     gan.gradient_updates = config['gradient_updates'] if 'gradient_updates' in config else 1
     gan.save_snapshot_rate = config['save_snapshot_rate'] if 'save_snapshot_rate' in config else 100
     gan.save_model_rate = config['save_model_rate'] if 'save_model_rate' in config else 1000
+    gan.swap_buffer = config['swap_buffer'] if 'swap_buffer' in config else 512
+    gan.swap_chance = config['swap_chance'] if 'swap_chance' in config else 0.5
+
     gan.critic_updates = config['critic_updates'] if 'critic_updates' in config else 5
     gan.gradient_penalty_lambda = config['gradient_penalty_lambda'] if 'gradient_penalty_lambda' in config else 10
 
@@ -106,6 +109,8 @@ def build_labeled_gan(config, cuda):
     gan.gradient_updates = config['gradient_updates'] if 'gradient_updates' in config else 1
     gan.save_snapshot_rate = config['save_snapshot_rate'] if 'save_snapshot_rate' in config else 100
     gan.save_model_rate = config['save_model_rate'] if 'save_model_rate' in config else 1000
+    gan.swap_buffer = config['swap_buffer'] if 'swap_buffer' in config else 512
+    gan.swap_chance = config['swap_chance'] if 'swap_chance' in config else 0.5
 
     gan.critic_updates = config['critic_updates'] if 'critic_updates' in config else 5
     gan.gradient_penalty_lambda = config['gradient_penalty_lambda'] if 'gradient_penalty_lambda' in config else 10
