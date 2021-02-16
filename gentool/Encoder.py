@@ -23,6 +23,8 @@ class Encoder(SubModuleBase):
         skip_blocks = config['skip_blocks'] if 'skip_blocks' in config else 1
         kernel = config['kernel'] if 'kernel' in config else 3
         dense_layers = config['dense_layers'] if 'dense_layers' in config else 1
+        dense_width = config['dense_width'] if 'dense_width' in config else self.latent_dim
+        skip_blocks_doubling = config['skip_blocks_doubling'] if 'skip_blocks_doubling' in config else False
 
         normalization = config['normalization']
         activation = config['activation']
@@ -43,10 +45,14 @@ class Encoder(SubModuleBase):
                 in_channels = min((1 << index) * 1 * model_channels, max_channels)
                 out_channels = min((1 << index) * 2 * model_channels, max_channels)
 
+                skips = skip_blocks
+                if skip_blocks_doubling:
+                    skips <<= index
+
                 blocks.append(ResidualBlockDown(in_channels, out_channels,
                                                 self.image_size >> index, downsample_method, kernel))
 
-                for _ in range(skip_blocks - 1):
+                for _ in range(skips - 1):
                     blocks.append(ResidualBlockDown(out_channels, out_channels,
                                                     self.image_size >> (index + 1), 'none', kernel))
 
@@ -56,17 +62,20 @@ class Encoder(SubModuleBase):
             blocks = []
 
             dense_channels = min((1 << downsamples) * model_channels, max_channels) * 4 * 4
-            blocks.append(nn.Linear(dense_channels, self.latent_dim))
+
+            dense_out = dense_width if dense_layers > 1 else self.latent_dim
+            blocks.append(nn.Linear(dense_channels, dense_out))
 
             if dense_layers > 1:
-                blocks.append(get_normalization_1d(normalization, self.latent_dim))
+                blocks.append(get_normalization_1d(normalization, dense_out))
                 blocks.append(get_activation(activation))
 
             for i in range(dense_layers - 1):
-                blocks.append(nn.Linear(self.latent_dim, self.latent_dim))
+                dense_out = dense_width if i < dense_layers - 2 else self.latent_dim
+                blocks.append(nn.Linear(dense_width, dense_out))
 
                 if i < dense_layers - 2:
-                    blocks.append(get_normalization_1d(normalization, self.latent_dim))
+                    blocks.append(get_normalization_1d(normalization, dense_out))
                     blocks.append(get_activation(activation))
 
             blocks.append(get_activation(output_activation))

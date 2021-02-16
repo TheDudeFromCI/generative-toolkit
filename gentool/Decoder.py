@@ -23,6 +23,7 @@ class Decoder(SubModuleBase):
         skip_blocks = config['skip_blocks'] if 'skip_blocks' in config else 1
         kernel = config['kernel'] if 'kernel' in config else 3
         dense_layers = config['dense_layers'] if 'dense_layers' in config else 1
+        dense_width = config['dense_width'] if 'dense_width' in config else self.latent_dim
 
         normalization = config['normalization']
         activation = config['activation']
@@ -52,13 +53,16 @@ class Decoder(SubModuleBase):
         def dense_block():
             blocks = []
 
-            for _ in range(dense_layers - 1):
-                blocks.append(nn.Linear(self.latent_dim, self.latent_dim))
-                blocks.append(get_normalization_1d(normalization, self.latent_dim))
-                blocks.append(get_activation(activation))
-
             init_channels = min((1 << upsamples) * model_channels, max_channels)
-            blocks.append(nn.Linear(self.latent_dim, init_channels * 4 * 4))
+            for i in range(dense_layers):
+                dense_in = self.latent_dim if i == 0 else dense_width
+                dense_out = dense_width if i < dense_layers - 1 else init_channels * 4 * 4
+                blocks.append(nn.Linear(dense_in, dense_out))
+
+                if i < dense_layers - 1:
+                    blocks.append(get_normalization_1d(normalization, dense_out))
+                    blocks.append(get_activation(activation))
+
             blocks.append(nn.Unflatten(1, (init_channels, 4, 4)))
             return blocks
 
