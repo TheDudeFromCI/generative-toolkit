@@ -12,9 +12,7 @@ class Img2ImgGan(GanModelBase):
         self.input_sample_images = next(self.dataloader_input)
 
     def sample_images(self):
-        images = self.generator(self.input_sample_images)
-        rows = int(sqrt(len(images))) * 3
-        return images, rows
+        return self.sample_image_to_image(self.generator, self.input_sample_images)
 
     def train_batch(self):
         g_loss = 0

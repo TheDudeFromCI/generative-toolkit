@@ -97,17 +97,17 @@ class ImageModelBase(ModelBase):
     def sample_images(_):
         raise NotImplementedError
 
-    def sample_image_from_noise(self, size):
+    def sample_image_from_noise(self, model, size):
         z = self.noise(size)
-        return self(z), int(sqrt(self.batch_size))
+        return model(z), int(sqrt(self.batch_size))
 
-    def sample_image_to_image(self, batch):
-        generated = self(batch)
+    def sample_image_to_image(self, model, batch):
+        generated = model(batch)
         images = [val for pair in zip(batch, generated) for val in pair]
         return images, int(sqrt(len(batch))) * 2
 
-    def sample_image_to_image_masked(self, batch, modified):
-        generated = self(modified)
+    def sample_image_to_image_masked(self, model, batch, modified):
+        generated = model(modified)
         images = [val for pair in zip(batch, modified, generated) for val in pair]
         return images, int(sqrt(len(batch))) * 3
 
