@@ -12,7 +12,7 @@ class Img2ImgGan(GanModelBase):
         self.input_sample_images = next(self.dataloader_input)
 
     def summary(self):
-        torchinfo.summary(self, (self.image_channels, self.image_size, self.image_size))
+        torchinfo.summary(self, (1, self.image_channels, self.image_size, self.image_size))
 
         params = self.count_params()
         print(
