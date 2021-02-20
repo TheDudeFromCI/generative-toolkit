@@ -50,11 +50,11 @@ class Encoder(SubModuleBase):
                     skips <<= index
 
                 blocks.append(ResidualBlockDown(in_channels, out_channels,
-                                                self.image_size >> index, downsample_method, kernel))
+                                                self.image_size >> index, downsample_method, kernel, normalization, activation))
 
                 for _ in range(skips - 1):
                     blocks.append(ResidualBlockDown(out_channels, out_channels,
-                                                    self.image_size >> (index + 1), 'none', kernel))
+                                                    self.image_size >> (index + 1), 'none', kernel, normalization, activation))
 
             return blocks
 

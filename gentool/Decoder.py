@@ -43,11 +43,14 @@ class Decoder(SubModuleBase):
             for index in range(upsamples - 1, -1, -1):
                 in_channels = min((1 << index) * 2 * model_channels, max_channels)
                 out_channels = min((1 << index) * 1 * model_channels, max_channels)
+                image_size = 4 << index
 
                 for _ in range(skip_blocks - 1):
-                    blocks.append(ResidualBlockUp(in_channels, in_channels, 'none', kernel))
+                    blocks.append(ResidualBlockUp(in_channels, in_channels, image_size,
+                                                  'none', kernel, normalization, activation))
 
-                blocks.append(ResidualBlockUp(in_channels, out_channels, upsample_method, kernel))
+                blocks.append(ResidualBlockUp(in_channels, out_channels, image_size,
+                                              upsample_method, kernel, normalization, activation))
             return blocks
 
         def dense_block():

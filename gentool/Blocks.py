@@ -2,7 +2,7 @@ from torch import nn
 
 
 class ResidualBlockDown(nn.Module):
-    def __init__(self, in_channels, out_channels, image_size, downsample_method, kernel):
+    def __init__(self, in_channels, out_channels, image_size, downsample_method, kernel, normalization, activation):
         super().__init__()
 
         if downsample_method == 'none':
@@ -43,12 +43,12 @@ class ResidualBlockDown(nn.Module):
             assert False, f"Unknown downsample method '{downsample_method}'!"
 
         self.conv = nn.Sequential(
-            nn.LayerNorm((in_channels, image_size, image_size)),
-            nn.LeakyReLU(),
+            get_normalization(normalization, in_channels, image_size),
+            get_activation(activation),
 
             nn.Conv2d(in_channels, in_channels, kernel, 1, kernel // 2),
-            nn.LayerNorm((in_channels, image_size, image_size)),
-            nn.LeakyReLU(),
+            get_normalization(normalization, in_channels, image_size),
+            get_activation(activation),
 
             conv_downsample,
         )
@@ -58,7 +58,7 @@ class ResidualBlockDown(nn.Module):
 
 
 class ResidualBlockUp(nn.Module):
-    def __init__(self, in_channels, out_channels, upsample_method, kernel):
+    def __init__(self, in_channels, out_channels, image_size, upsample_method, kernel, normalization, activation):
         super().__init__()
 
         if upsample_method == 'none':
@@ -105,12 +105,36 @@ class ResidualBlockUp(nn.Module):
             assert False, f"Unknown upsample method '{upsample_method}'!"
 
         self.conv = nn.Sequential(
-            nn.BatchNorm2d(in_channels),
-            nn.LeakyReLU(),
+            get_normalization(normalization, in_channels, image_size),
+            get_activation(activation),
 
             conv_upsample,
-            nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(),
+            get_normalization(normalization, out_channels, image_size),
+            get_activation(activation),
+
+            nn.Conv2d(out_channels, out_channels, kernel, 1, kernel // 2),
+        )
+
+    def forward(self, x):
+        return self.conv(x) + self.shortcut(x)
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, image_size, kernel, normalization, activation):
+        super().__init__()
+
+        if in_channels == out_channels:
+            self.shortcut = nn.Identity()
+        else:
+            self.shortcut = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+
+        self.conv = nn.Sequential(
+            get_normalization(normalization, in_channels, image_size),
+            get_activation(activation),
+
+            nn.Conv2d(in_channels, out_channels, kernel, 1, kernel // 2),
+            get_normalization(normalization, out_channels, image_size),
+            get_activation(activation),
 
             nn.Conv2d(out_channels, out_channels, kernel, 1, kernel // 2),
         )

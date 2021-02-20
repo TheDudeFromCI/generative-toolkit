@@ -52,11 +52,11 @@ class DualEncoder(SubModuleBase):
                 out_channels = min((1 << index) * 2 * model_channels, max_channels)
 
                 blocks.append(ResidualBlockDown(in_channels, out_channels,
-                                                self.image_size >> index, downsample_method, kernel))
+                                                self.image_size >> index, downsample_method, kernel, normalization, activation))
 
                 for _ in range(skip_blocks - 1):
                     blocks.append(ResidualBlockDown(out_channels, out_channels,
-                                                    self.image_size >> (index + 1), 'none', kernel))
+                                                    self.image_size >> (index + 1), 'none', kernel, normalization, activation))
 
             return blocks
 
