@@ -1,5 +1,5 @@
 from os import listdir, makedirs, remove
-from os.path import join, isfile
+from os.path import join, isfile, exists
 
 from math import ceil
 from random import randint
@@ -16,6 +16,9 @@ from torch.utils.data.dataloader import DataLoader
 
 
 def delete_file(file):
+    if not exists(file):
+        return
+
     if isfile(file):
         remove(file)
     else:
@@ -39,7 +42,7 @@ def pre_generate_dataset_parallel(image_folders, transform, output_folder, sampl
     samples_each = ceil(sample_count / workers)
 
     def pre_generate_dataset(offset):
-        for i in tqdm(range(samples_each)):
+        for i in tqdm(range(samples_each), smoothing=0):
             while True:
                 try:
                     img_name = files[randint(0, len(files) - 1)]
@@ -67,7 +70,7 @@ def pre_generate_dataset_1for1(image_folders, transform, output_folder, format='
     files = get_files(image_folders)
 
     i = 0
-    for img_name in tqdm(files):
+    for img_name in tqdm(files, smoothing=0):
         try:
             image = Image.open(img_name).convert(format)
             image = transform(image)
