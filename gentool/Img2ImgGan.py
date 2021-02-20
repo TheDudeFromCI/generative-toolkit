@@ -1,4 +1,4 @@
-from math import sqrt
+import torchinfo
 
 from GanModelBase import GanModelBase
 
@@ -10,6 +10,13 @@ class Img2ImgGan(GanModelBase):
         self.dataloader_output = dataloader_output
         self.dataloader_input = dataloader_input
         self.input_sample_images = next(self.dataloader_input)
+
+    def summary(self):
+        torchinfo.summary(self, (self.image_channels, self.image_size, self.image_size))
+
+        params = self.count_params()
+        print(
+            f"Loaded GAN with {params['generator']:,} generator params and {params['discriminator']:,} discriminator params.")
 
     def sample_images(self):
         return self.sample_image_to_image(self.generator, self.input_sample_images)
