@@ -66,13 +66,13 @@ def pre_generate_dataset_1for1(image_folders, transform, output_folder, format='
 
     files = get_files(image_folders)
 
-    i = -1
+    i = 0
     for img_name in tqdm(files):
-        i += 1
         try:
             image = Image.open(img_name).convert(format)
             image = transform(image)
             save_batch(image, output_folder, i + offset)
+            i += 1
         except UnidentifiedImageError:
             continue
 
@@ -83,8 +83,8 @@ def save_batch(batch, output_folder, index):
 
 
 def numpy_dataloader(folder, batch_size, cuda=True):
-    dataloader = DataLoader(NumpyDataLoader(folder), batch_size=batch_size, num_workers=8, pin_memory=True,
-                            persistent_workers=False, prefetch_factor=16, drop_last=True, shuffle=True)
+    dataloader = DataLoader(NumpyDataLoader(folder), batch_size=batch_size, num_workers=4, pin_memory=True,
+                            persistent_workers=False, prefetch_factor=6, drop_last=True, shuffle=True)
 
     dtype = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     for loader in repeat(dataloader):
@@ -95,7 +95,7 @@ def numpy_dataloader(folder, batch_size, cuda=True):
 
 def supervised_numpy_dataloader(sample_folder, label_folder, batch_size, cuda=True):
     dataloader = DataLoader(SupervisedNumpyDataLoader(sample_folder, label_folder), batch_size=batch_size, pin_memory=True,
-                            num_workers=8, persistent_workers=False, prefetch_factor=16, drop_last=True, shuffle=True)
+                            num_workers=4, persistent_workers=False, prefetch_factor=6, drop_last=True, shuffle=True)
 
     dtype = torch.cuda.FloatTensor if cuda else torch.FloatTensor
     for loader in repeat(dataloader):
